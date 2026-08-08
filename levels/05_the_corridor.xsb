@@ -1,0 +1,12 @@
+; Title: The Corridor
+; Teaches: sequencing. Row 4 is the only way through the middle wall, for you
+; and for both crates. Park a crate in it and the level is over.
+#########
+#   #   #
+# $ # . #
+#   #   #
+#  @    #
+#   #   #
+# $ # . #
+#   #   #
+#########

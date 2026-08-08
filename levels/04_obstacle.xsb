@@ -1,0 +1,9 @@
+; Title: Obstacle
+; Teaches: interior walls constrain your routes, not just the crates.
+########
+#      #
+# $  . #
+#  ##  #
+# $  . #
+#  @   #
+########

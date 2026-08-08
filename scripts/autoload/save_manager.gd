@@ -1,0 +1,157 @@
+## Autoload. Persists which levels are cleared and the player's best move and
+## push counts for each.
+##
+## Progress is keyed by level *id* (the `.xsb` basename), never by index, so
+## inserting or reordering levels cannot corrupt an existing save.
+##
+## The file is [ConfigFile] rather than JSON because it stays readable and
+## hand-editable, which is worth more during development than compactness. It is
+## written to [code]user://[/code], i.e.
+## [code]%APPDATA%\Godot\app_userdata\Boxpush\[/code] on Windows.
+extends Node
+
+const SAVE_PATH := "user://boxpush_save.cfg"
+const SECTION_META := "meta"
+const SECTION_PROGRESS := "progress"
+
+## Bump when the on-disk shape changes. A save written by a different version is
+## discarded rather than migrated — acceptable for a test project, and the one
+## decision here that a real game would revisit.
+const SAVE_FORMAT_VERSION := 1
+
+const NO_RECORD := -1
+
+signal progress_changed(level_id: String)
+
+var _entries := {}
+
+
+func _ready() -> void:
+	load_progress()
+
+
+## Reads the save file. Returns false when nothing usable was loaded — a fresh
+## install, an unreadable file, or a save from an incompatible version. In every
+## one of those cases the in-memory progress is left empty, which is the correct
+## starting state, so callers rarely need the return value.
+func load_progress() -> bool:
+	_entries.clear()
+
+	var config := ConfigFile.new()
+	var err := config.load(SAVE_PATH)
+	if err != OK:
+		if err != ERR_FILE_NOT_FOUND:
+			push_warning("Could not read %s (error %d); starting fresh." % [SAVE_PATH, err])
+		return false
+
+	var version: int = config.get_value(SECTION_META, "format_version", 0)
+	if version != SAVE_FORMAT_VERSION:
+		push_warning(
+			"Save format %d is not %d; discarding progress." % [version, SAVE_FORMAT_VERSION]
+		)
+		return false
+
+	for level_id in config.get_section_keys(SECTION_PROGRESS):
+		var entry: Dictionary = config.get_value(SECTION_PROGRESS, level_id, {})
+		_entries[level_id] = {
+			"cleared": bool(entry.get("cleared", false)),
+			"best_moves": int(entry.get("best_moves", NO_RECORD)),
+			"best_pushes": int(entry.get("best_pushes", NO_RECORD)),
+		}
+
+	return true
+
+
+func save_progress() -> bool:
+	var config := ConfigFile.new()
+	config.set_value(SECTION_META, "format_version", SAVE_FORMAT_VERSION)
+	for level_id: String in _entries:
+		config.set_value(SECTION_PROGRESS, level_id, _entries[level_id])
+
+	var err := config.save(SAVE_PATH)
+	if err != OK:
+		push_error("Could not write %s (error %d)." % [SAVE_PATH, err])
+		return false
+	return true
+
+
+func is_cleared(level_id: String) -> bool:
+	return _entries.has(level_id) and _entries[level_id]["cleared"]
+
+
+## Fewest moves the player has ever cleared this level in, or [constant NO_RECORD].
+func best_moves(level_id: String) -> int:
+	if not _entries.has(level_id):
+		return NO_RECORD
+	return _entries[level_id]["best_moves"]
+
+
+func best_pushes(level_id: String) -> int:
+	if not _entries.has(level_id):
+		return NO_RECORD
+	return _entries[level_id]["best_pushes"]
+
+
+## Records a clear and writes the file immediately — a level clear is rare and
+## the file is a few hundred bytes, so there is nothing to gain from batching,
+## and losing progress to a crash would be worse than a stutter.
+##
+## Move and push records are tracked independently: a run may set a new move
+## record without touching the push record, and vice versa.
+##
+## Returns [code]{ first_clear, beat_moves, beat_pushes }[/code] so the clear
+## overlay can say which record, if any, was just broken.
+func record_clear(level_id: String, moves: int, pushes: int) -> Dictionary:
+	var previous: Dictionary = _entries.get(
+		level_id, {"cleared": false, "best_moves": NO_RECORD, "best_pushes": NO_RECORD}
+	)
+
+	var first_clear: bool = not previous["cleared"]
+	var beat_moves: bool = previous["best_moves"] == NO_RECORD or moves < previous["best_moves"]
+	var beat_pushes: bool = previous["best_pushes"] == NO_RECORD or pushes < previous["best_pushes"]
+
+	_entries[level_id] = {
+		"cleared": true,
+		"best_moves": moves if beat_moves else previous["best_moves"],
+		"best_pushes": pushes if beat_pushes else previous["best_pushes"],
+	}
+
+	save_progress()
+	progress_changed.emit(level_id)
+
+	return {
+		"first_clear": first_clear,
+		"beat_moves": beat_moves and not first_clear,
+		"beat_pushes": beat_pushes and not first_clear,
+	}
+
+
+## Levels unlock in order: level 0 is always open, and level n opens once n-1 is
+## cleared. Any level already cleared stays open even if the chain ahead of it
+## is not.
+func is_unlocked(index: int) -> bool:
+	if index <= 0:
+		return true
+	if index >= LevelIndex.count():
+		return false
+	var previous_id := LevelIndex.id_for_path(LevelIndex.path_at(index - 1))
+	return is_cleared(previous_id) or is_cleared(LevelIndex.id_for_path(LevelIndex.path_at(index)))
+
+
+## Index the "Play" button should resume at: the first level not yet cleared, or
+## the last level once everything is done.
+func resume_index() -> int:
+	for i in LevelIndex.count():
+		if not is_cleared(LevelIndex.id_for_path(LevelIndex.path_at(i))):
+			return i
+	return maxi(0, LevelIndex.count() - 1)
+
+
+## Wipes progress in memory and on disk. Exposed for the settings screen and for
+## tests that need a known-empty starting state.
+func reset_progress() -> void:
+	_entries.clear()
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	save_progress()
+	progress_changed.emit("")

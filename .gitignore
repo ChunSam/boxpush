@@ -1,0 +1,28 @@
+# Godot 4+ engine cache and generated files
+.godot/
+/android/
+
+# Godot 3 leftovers (kept so a stray import dir never lands in a commit)
+.import/
+
+# Export artifacts. export_presets.cfg is ignored because it embeds absolute
+# local paths and, for some platforms, signing credentials.
+export.cfg
+export_presets.cfg
+/build/
+/export/
+
+# Imported translations (generated from CSV)
+*.translation
+
+# Mono / C# (unused today, but harmless to pre-empt)
+.mono/
+data_*/
+mono_crash.*.json
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

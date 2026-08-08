@@ -1,0 +1,18 @@
+# Normalise line endings so scene/resource files stay diffable across machines.
+* text=auto eol=lf
+
+*.gd      text eol=lf
+*.tscn    text eol=lf
+*.tres    text eol=lf
+*.godot   text eol=lf
+*.cfg     text eol=lf
+*.import  text eol=lf
+*.xsb     text eol=lf
+*.md      text eol=lf
+*.ps1     text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.ogg  binary
+*.wav  binary
+*.ttf  binary
