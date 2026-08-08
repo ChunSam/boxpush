@@ -1,16 +1,19 @@
-## Guards the hand-maintained configuration that nothing else would notice was
+## Guards the hand-maintained project files that nothing else would notice were
 ## broken.
 ##
 ## Input actions are stored in an engine-specific serialised form; a bad
 ## hand-edit there produces a game that runs perfectly and ignores the keyboard.
 ## The [code]SUITES[/code] manifest is worse still: a test file missing from it
 ## simply never runs, and the gate reports every remaining test passing and exits
-## 0, so the omission reads as green. Asserting on both here turns a silent
+## 0, so the omission reads as green. Asserting on them here turns a silent
 ## problem into a failed test.
 extends TestCase
 
 const RUNNER_PATH := "res://tests/run_tests.gd"
 const TESTS_DIR := "res://tests"
+
+const CLAUDE_MD_PATH := "res://CLAUDE.md"
+const CLAUDE_MD_MAX_LINES := 200
 
 const REQUIRED_ACTIONS := [
 	"move_up",
@@ -85,6 +88,42 @@ func test_every_suite_is_registered() -> void:
 			registered.has(path),
 			"'%s' declares test_* methods but is missing from SUITES in %s" % [path, RUNNER_PATH],
 		)
+
+
+## CLAUDE.md is loaded into every context window, so its length is a cost paid on
+## every turn rather than once. The global conventions cap it at
+## [constant CLAUDE_MD_MAX_LINES] lines; this is that cap made binding, because a
+## budget nothing checks is a wish.
+##
+## A prose-length check is an odd thing to find in a game's test suite. It lives
+## here because the gate is the only thing in this project that runs on every
+## change, and a rule enforced nowhere decays.
+func test_claude_md_within_budget() -> void:
+	if not FileAccess.file_exists(CLAUDE_MD_PATH):
+		fail("%s is missing" % CLAUDE_MD_PATH)
+		return
+
+	var lines := _line_count(FileAccess.get_file_as_string(CLAUDE_MD_PATH))
+	var message := (
+		"CLAUDE.md is %d lines, over the %d-line budget. Evict an entry; do not compress one."
+		% [lines, CLAUDE_MD_MAX_LINES]
+	)
+	assert_true(lines <= CLAUDE_MD_MAX_LINES, message)
+
+
+## Lines counted the way git and every editor count them: newline terminators,
+## with the final one closing the last line rather than opening a new one.
+##
+## To check by hand, use [code]Get-Content CLAUDE.md -Encoding utf8[/code]. The
+## flag is not optional: without it PowerShell 5.1 decodes the file as the ANSI
+## codepage, and under CP949 a line ending in an em dash loses its newline —
+## byte 0x94 is a lead byte and swallows the 0x0A that follows. That undercounts
+## this file by two and disagrees with the number reported here.
+func _line_count(text: String) -> int:
+	var normalised := text.replace("\r\n", "\n")
+	if normalised.ends_with("\n"):
+		normalised = normalised.substr(0, normalised.length() - 1)
+	return normalised.split("\n").size()
 
 
 ## The paths listed in [code]run_tests.gd[/code]'s SUITES const, read by
