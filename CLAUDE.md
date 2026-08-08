@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Boxpush — working notes for Claude
 
 A Sokoban puzzle game in Godot 4.7.1, GDScript. Read `docs/tech-design.md`
@@ -16,12 +20,26 @@ Nothing is done until this exits 0:
 Read the real exit code. Never pipe it — a trailing `| tail` or `| Select-Object`
 hides the failure.
 
-Godot is **not on PATH**. It lives at
-`%LOCALAPPDATA%\Microsoft\WinGet\Packages\GodotEngine.GodotEngine_*\Godot_v4.7.1-stable_win64_console.exe`.
-Use the `tools/` scripts, which resolve it. When invoking the engine directly,
-use the `_console.exe` build — the plain binary detaches from the console on
-Windows and its stdout never reaches the caller, so a failing run looks silent
-and passes.
+The other entry points are `.\tools\run.ps1` (launch the game) and
+`.\tools\editor.ps1` (open the editor). All three resolve the engine through
+`tools/find-godot.ps1`, which checks `$env:GODOT_BIN`, then `PATH`, then the
+winget package folder. On a fresh clone the first run also does a one-time
+`--import`: without the `.godot` cache no `class_name` resolves and every script
+fails to compile.
+
+Do not assume `godot` is on `PATH` — on a stock machine it is not, and the binary
+is version-stamped
+(`%LOCALAPPDATA%\Microsoft\WinGet\Packages\GodotEngine.GodotEngine_*\Godot_v4.7.1-stable_win64_console.exe`).
+Go through `tools/`. When invoking the engine directly, use the `_console.exe`
+build — the plain binary detaches from the console on Windows and its stdout
+never reaches the caller, so a failing run looks silent and passes.
+
+### Running a single test
+
+There is no filter. `run_tests.gd` reads no command-line arguments and
+`test.ps1` forwards none. The whole suite is about a second, so just run it all.
+To iterate on one suite, temporarily trim the `SUITES` const — and put it back
+before committing.
 
 ## The one architectural rule
 
@@ -32,14 +50,52 @@ there.
 
 Dependencies point downward: `scenes/` → `autoload/` → `core/`. Never upward.
 
+- `core/` — `LevelData` (parses `.xsb`, immutable once loaded), `SokobanState`
+  (the live board plus undo history), `LevelIndex` (the ship manifest). All
+  plain `RefCounted`.
+- `autoload/` — `LevelLibrary` parses every indexed level once at boot, so a
+  malformed board fails loudly at startup instead of mid-session.
+  `SaveManager` keys progress by level *id* (the `.xsb` basename) and never by
+  index, so reordering levels cannot corrupt a save.
+
+## Two hand-maintained manifests
+
+Both exist for good reasons, and forgetting either fails silently:
+
+- `LEVEL_PATHS` in `scripts/core/level_index.gd` — append a level here or it
+  will not ship. `DirAccess` over `res://` cannot see non-imported files in an
+  exported build, so a directory scan would work in the editor and return
+  nothing in a shipped build.
+- `SUITES` in `tests/run_tests.gd` — append a new test file here or it never
+  runs. The gate still prints "N passed, 0 failed" and exits 0, so a forgotten
+  suite reads as green. Within a listed suite, `test_*` methods are discovered
+  automatically.
+
+## Writing tests
+
+Subclass `TestCase` (`tests/test_case.gd`) and name methods `test_*`. The runner
+builds a fresh instance per test, so state cannot leak between them.
+
+Assertions **record a failure and carry on** rather than aborting, so one method
+reports every problem it finds instead of only the first. Do not write an
+assertion whose failure leaves the lines after it to crash on a null.
+
+`SokobanState.to_ascii()` renders the live board as XSB — print it first when a
+movement test fails.
+
+## Current state of the code
+
+`SokobanState.try_move()` and `undo()` are **stubs**. Their contract is fixed —
+the `MoveResult` truth table, and the history packing described below — but the
+bodies only `push_error()` and return `BLOCKED` / `false`. `push_error` does not
+fail a headless run, so anything built on them misbehaves quietly rather than
+crashing. Implementing them is milestone v0.2.
+
 ## Conventions
 
 - Static types everywhere (`var x := 0`, explicit `-> void`). Tabs. Line length 100.
 - `##` doc comments on classes and non-obvious functions. Comments say **why**.
 - Signals in the past tense. `_leading_underscore` for private members.
-- After adding a level: append it to `LEVEL_PATHS` in `scripts/core/level_index.gd`,
-  or it will not ship. That manifest exists because `DirAccess` over `res://`
-  cannot see non-imported files in an exported build.
 
 ## Gotchas already paid for
 
@@ -49,8 +105,11 @@ Dependencies point downward: `scenes/` → `autoload/` → `core/`. Never upward
 - The export preset needs `*.xsb` in "Filters to export non-resource files", or
   the shipped build has no levels. `export_presets.cfg` is git-ignored, so this
   must be re-entered on every machine.
-- `SokobanState.DIRECTIONS` order is the undo history's encoding. Reordering it
-  silently invalidates stored histories.
+- `SokobanState.DIRECTIONS` order is the undo history's encoding — entries pack
+  as `direction_index | (was_a_push << 2)`. Reordering it silently invalidates
+  stored histories.
+- The save file is at `%APPDATA%\Godot\app_userdata\Boxpush\boxpush_save.cfg`.
+  `SaveManager.reset_progress()` wipes it when a test needs a known-empty start.
 
 ## Language
 
