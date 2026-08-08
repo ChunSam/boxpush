@@ -60,15 +60,17 @@ Dependencies point downward: `scenes/` → `autoload/` → `core/`. Never upward
 
 ## Two hand-maintained manifests
 
-Both exist for good reasons, and forgetting either fails silently:
+Both exist for the same reason — `DirAccess` over `res://` cannot see
+non-imported files in an exported build, so a directory scan would work in the
+editor and return nothing in a shipped build:
 
 - `LEVEL_PATHS` in `scripts/core/level_index.gd` — append a level here or it
-  will not ship. `DirAccess` over `res://` cannot see non-imported files in an
-  exported build, so a directory scan would work in the editor and return
-  nothing in a shipped build.
+  will not ship. Nothing catches an `.xsb` that is on disk but unlisted, because
+  an unshipped work-in-progress level is a legitimate state.
 - `SUITES` in `tests/run_tests.gd` — append a new test file here or it never
-  runs. The gate still prints "N passed, 0 failed" and exits 0, so a forgotten
-  suite reads as green. Within a listed suite, `test_*` methods are discovered
+  runs. `test_every_suite_is_registered` catches the omission; before it existed
+  a forgotten suite read as green, since the gate reports the tests it did run
+  passing and exits 0. Within a listed suite, `test_*` methods are discovered
   automatically.
 
 ## Writing tests

@@ -1,9 +1,16 @@
-## Guards the parts of project.godot that nothing else would notice were broken.
+## Guards the hand-maintained configuration that nothing else would notice was
+## broken.
 ##
-## Input actions in particular are stored in an engine-specific serialised form;
-## a bad hand-edit there produces a game that runs perfectly and ignores the
-## keyboard. Asserting on them here turns that into a failed test instead.
+## Input actions are stored in an engine-specific serialised form; a bad
+## hand-edit there produces a game that runs perfectly and ignores the keyboard.
+## The [code]SUITES[/code] manifest is worse still: a test file missing from it
+## simply never runs, and the gate reports every remaining test passing and exits
+## 0, so the omission reads as green. Asserting on both here turns a silent
+## problem into a failed test.
 extends TestCase
+
+const RUNNER_PATH := "res://tests/run_tests.gd"
+const TESTS_DIR := "res://tests"
 
 const REQUIRED_ACTIONS := [
 	"move_up",
@@ -64,3 +71,67 @@ func test_project_identity() -> void:
 		"Boxpush",
 		"project name",
 	)
+
+
+## Every test suite on disk must be listed in run_tests.gd's SUITES manifest.
+##
+## Without this, adding a test file and forgetting the manifest leaves the new
+## tests unrun while the gate still exits 0 — the one failure mode the manifest
+## cannot report on itself.
+func test_every_suite_is_registered() -> void:
+	var registered := _registered_suites()
+	for path: String in _discovered_suites():
+		assert_true(
+			registered.has(path),
+			"'%s' declares test_* methods but is missing from SUITES in %s" % [path, RUNNER_PATH],
+		)
+
+
+## The paths listed in [code]run_tests.gd[/code]'s SUITES const, read by
+## reflection so that this test cannot drift from the manifest it guards.
+func _registered_suites() -> Array:
+	var runner := load(RUNNER_PATH) as GDScript
+	if runner == null:
+		fail("could not load %s" % RUNNER_PATH)
+		return []
+	return runner.get_script_constant_map().get("SUITES", [])
+
+
+## Every script in [constant TESTS_DIR] that declares at least one
+## [code]test_*[/code] method.
+##
+## Suites are identified by what they declare rather than by filename, so a
+## suite is caught whatever it is called. test_case.gd declares only assertions
+## and run_tests.gd only [code]_[/code]-prefixed helpers, so both drop out
+## without needing to be named here.
+##
+## Scanning the directory is sound only because the suite runs from the project
+## folder; in an exported build [DirAccess] would see nothing. That is the same
+## constraint that makes [constant LevelIndex.LEVEL_PATHS] a manifest, and it is
+## why the manifest is what ships and this scan is only its guard.
+func _discovered_suites() -> PackedStringArray:
+	var found := PackedStringArray()
+
+	var dir := DirAccess.open(TESTS_DIR)
+	if dir == null:
+		fail("could not open %s" % TESTS_DIR)
+		return found
+
+	for file in dir.get_files():
+		if not file.ends_with(".gd"):
+			continue
+
+		var path := "%s/%s" % [TESTS_DIR, file]
+		var script := load(path) as GDScript
+		if script == null:
+			fail("could not load %s" % path)
+			continue
+
+		for method in script.get_script_method_list():
+			var method_name: String = method["name"]
+			if method_name.begins_with("test_"):
+				found.append(path)
+				break
+
+	found.sort()
+	return found
