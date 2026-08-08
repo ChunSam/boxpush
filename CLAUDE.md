@@ -20,6 +20,11 @@ Nothing is done until this exits 0:
 Read the real exit code. Never pipe it — a trailing `| tail` or `| Select-Object`
 hides the failure.
 
+A new test is not trusted until it has been watched to fail. Break what it
+guards, confirm it goes red with a message you could act on, then restore. Every
+guard in this repo was added because a green suite turned out to be hiding
+something, so a guard that has only ever been green proves nothing.
+
 The other entry points are `.\tools\run.ps1` (launch the game) and
 `.\tools\editor.ps1` (open the editor). All three resolve the engine through
 `tools/find-godot.ps1`, which checks `$env:GODOT_BIN`, then `PATH`, then the
