@@ -22,6 +22,7 @@ then `PATH`, then the winget package folder. Nothing needs to be on `PATH`.
 .\tools\test.ps1      # run the test suite — the verification gate, exits 0 or 1
 .\tools\run.ps1       # launch the game
 .\tools\editor.ps1    # open the Godot editor
+.\tools\solve.ps1     # regenerate the recorded level solutions
 ```
 
 ## Documentation
@@ -43,9 +44,9 @@ never disabled — including after a clear, so you can undo back into play.
    `levels/NN_name.xsb`, with a `; Title: ...` comment.
 2. Append its path to `LEVEL_PATHS` in `scripts/core/level_index.gd`. This is a
    manifest rather than a directory scan on purpose — see tech-design §5.
-3. Record a solution for it in `SOLUTIONS` in `tests/test_levels.gd`, in LURD
-   notation. A level without one fails the suite: every shipped level has to be
-   proven winnable, not assumed to be.
+3. Run `.\tools\solve.ps1` and paste the block it prints over `SOLUTIONS` in
+   `tests/test_levels.gd`. A level without a recorded solution fails the suite:
+   every shipped level has to be proven winnable, not assumed to be.
 4. Run `.\tools\test.ps1`. The suite parses and validates every indexed level and
    replays every solution, so a malformed or broken board fails the build rather
    than the player.

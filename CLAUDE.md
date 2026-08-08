@@ -66,7 +66,8 @@ editor and return nothing in a shipped build:
 
 - `LEVEL_PATHS` in `scripts/core/level_index.gd` — append a level here or it
   will not ship. Nothing catches an `.xsb` that is on disk but unlisted, because
-  an unshipped work-in-progress level is a legitimate state.
+  an unshipped work-in-progress level is a legitimate state. A new or edited
+  level also needs its recorded solution regenerating: `.\tools\solve.ps1`.
 - `SUITES` in `tests/run_tests.gd` — append a new test file here or it never
   runs. `test_every_suite_is_registered` catches the omission; before it existed
   a forgotten suite read as green, since the gate reports the tests it did run
@@ -87,11 +88,12 @@ movement test fails.
 
 ## Current state of the code
 
-`SokobanState.try_move()` and `undo()` are **stubs**. Their contract is fixed —
-the `MoveResult` truth table, and the history packing described below — but the
-bodies only `push_error()` and return `BLOCKED` / `false`. `push_error` does not
-fail a headless run, so anything built on them misbehaves quietly rather than
-crashing. Implementing them is milestone v0.2.
+v0.2 is complete. The rules, the board and the keyboard all work, and every
+shipped level is proven winnable by a solution the gate replays.
+
+`SaveManager` is the exception: implemented since v0.1 and **not covered by a
+single test**. It is the one part of the project where "it looks right" is the
+whole of the evidence. v0.3 is where that gets fixed.
 
 ## Conventions
 

@@ -1,6 +1,6 @@
 # Boxpush — Technical Design
 
-Status: v0.1 (2026-08-09)
+Status: v0.2 (2026-08-09)
 Engine: Godot **4.7.1.stable.official** — `winget install GodotEngine.GodotEngine`
 Language: **GDScript**
 
@@ -98,7 +98,9 @@ boxpush/
    ├─ find-godot.ps1        Resolves the engine binary
    ├─ test.ps1              The verification gate
    ├─ run.ps1               Launches the game
-   └─ editor.ps1            Opens the editor
+   ├─ editor.ps1            Opens the editor
+   ├─ solve.ps1             Regenerates the recorded level solutions
+   └─ solve_levels.gd       The search behind it (headless, BFS)
 ```
 
 Folders added later: `scenes/ui/`, `assets/sprites/`, `assets/audio/`.
@@ -133,16 +135,19 @@ enum MoveResult { BLOCKED, MOVED, PUSHED }
 
 const DIRECTIONS: Array[Vector2i] = [UP, DOWN, LEFT, RIGHT]  # index order is load-bearing
 
-func try_move(dir: Vector2i) -> MoveResult   # v0.2
-func undo() -> bool                          # v0.2
+func try_move(dir: Vector2i) -> MoveResult
+func undo() -> bool
 func reset() -> void
 func is_solved() -> bool
 func boxes_on_goal() -> int
 func to_ascii() -> String
+
+static func direction_from_letter(letter: String) -> Vector2i  # LURD notation
 ```
 
-`try_move` and `undo` are **stubs as of v0.1** — they `push_error` and are
-implemented in v0.2. Everything else on the class is live and under test.
+All of it is implemented and under test as of v0.2. Undo stores the move, not a
+board snapshot — one packed int per move, `direction_index | (was_a_push << 2)` —
+so it stays O(1) in time and memory with unbounded history.
 
 ---
 
@@ -312,27 +317,32 @@ problem it found instead of only the first.
 small files, has no version to keep in step with the engine, and runs anywhere
 Godot runs. If the suite outgrows it, swapping in GUT is a contained change.
 
-Covered as of v0.1 (30 tests):
+Covered as of v0.2 (47 tests):
 
 - **`test_level_data.gd`** — parsing, every glyph, ASCII round-trip, and each
   validation rule, asserted through its rejection message.
-- **`test_levels.gd`** — every shipped level parses, has matching crate/goal
-  counts, has a title; ids are unique; parsing is deterministic; no level starts
-  already solved.
-- **`test_project_config.gd`** — every input action exists and is bound to a
-  physical key; the main scene is set and loadable; autoloads are registered.
+- **`test_sokoban_state.gd`** — the `MoveResult` truth table, both counters, and
+  undo as the exact inverse of a move, including the property that undoing an
+  arbitrary route restores `to_ascii()` and both counters exactly.
+- **`test_levels.gd`** — every shipped level parses, is structurally sane, and
+  **is cleared by replaying its recorded solution**. That last one is what turns
+  "the levels parse" into "the levels are winnable".
+- **`test_project_config.gd`** — the input map, the autoloads, the `SUITES`
+  manifest, and that the main scene instantiates with its script attached.
 
-Not covered yet, in the order it will be:
+Solutions are recorded rather than searched at test time: `tools\solve.ps1`
+finds them by breadth-first search driven through the real `try_move`, and the
+suite only replays. Searching in the gate would be slow, and would also pass a
+level that had silently become a different — but still solvable — level.
 
-1. **Movement rules** — the `MoveResult` truth table, arriving with v0.2.
-2. **Solution replay** — one recorded solution per level, replayed through
-   `try_move` and asserted to end in `is_solved()`. This is what turns "the
-   levels parse" into "the levels are winnable", and it is the highest-value
-   test in the plan.
-3. **Undo** — property test: any sequence of moves followed by the same number
-   of undos restores `to_ascii()`, `move_count` and `push_count` exactly.
-4. **`SaveManager`** — needs `user://` redirected to a temp dir to stay
-   hermetic; use `--userdir` or inject the path.
+Not covered yet:
+
+1. **`SaveManager`** — implemented since v0.1 and entirely untested, which makes
+   it the least-trustworthy code in the project. Needs `user://` redirected to a
+   temp dir to stay hermetic; use `--userdir` or inject the path. v0.3.
+2. **Scene behaviour** — input routing, key repeat and clear detection are
+   verified by hand rather than in the gate, because `scripts/core/` is the part
+   deliberately kept testable without an engine.
 
 ---
 

@@ -16,8 +16,9 @@ extends TestCase
 ## solve. Searching here would be slow, and would also happily pass a level that
 ## had silently become a different — but still solvable — level.
 ##
-## Editing a `.xsb` almost certainly invalidates its entry. Re-run the search
-## rather than patching the string by hand.
+## Editing a `.xsb` almost certainly invalidates its entry. Regenerate with
+## [code]tools\solve.ps1[/code], which prints this whole block; do not patch a
+## string by hand.
 const SOLUTIONS := {
 	"01_first_push": "R",
 	"02_go_around": "luRRRdllldRRR",

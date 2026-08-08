@@ -52,6 +52,10 @@ keypress makes exactly one push, that a cleared board ignores further movement,
 that undo restores the start exactly, and that holding a direction steps once
 immediately and then repeats.
 
+The parts no test can see — board placement and scaling, HUD legibility, whether
+crate-on-goal reads at a glance, and how the repeat rate feels in the hand —
+were checked in the running game and signed off on 2026-08-09.
+
 **This was the milestone that mattered most** — it is where "the levels parse"
 became "the levels are winnable", proven by replay rather than by hand.
 
