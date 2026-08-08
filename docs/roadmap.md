@@ -25,27 +25,35 @@ levels with their geometry. Both verified.
 
 ---
 
-## v0.2 — Playable
+## v0.2 — Playable ✅ complete (2026-08-09)
 
 One level, fully playable. No menus, no progression, no art.
 
-- [ ] `SokobanState.try_move()` — the four-case truth table from GDD §4
-- [ ] `SokobanState.undo()` — inverse of the recorded move, counters included
-- [ ] `scenes/game/board_view.tscn` — `_draw()`-based board, integer-scaled and
+- [x] `SokobanState.try_move()` — the four-case truth table from GDD §4
+- [x] `SokobanState.undo()` — inverse of the recorded move, counters included
+- [x] `scenes/game/board_view.tscn` — `_draw()`-based board, integer-scaled and
       centred, redrawn from state
-- [ ] `scenes/game/game_screen.tscn` — owns the state, routes input, holds the HUD
-- [ ] Key repeat: 250 ms delay, 90 ms interval
-- [ ] `R` restarts, `Z` undoes
-- [ ] Clear detection: `is_solved()` freezes input and prints to stdout
-- [ ] Tests: movement truth table; undo round-trip property; one recorded
+- [x] `scenes/game/game_screen.tscn` — owns the state, routes input, holds the HUD
+- [x] Key repeat: 250 ms delay, 90 ms interval
+- [x] `R` restarts, `Z` undoes
+- [x] Clear detection: `is_solved()` freezes movement and prints to stdout;
+      undo and restart keep working, per GDD §4
+- [x] Tests: movement truth table; undo round-trip property; one recorded
       solution per level replayed to `is_solved()`
 
 **Acceptance:** launch, clear `01_first_push` with the keyboard, undo back to the
 start, and have `to_ascii()` match the level's start exactly. Solution-replay
 tests green for all five levels.
 
-**This is the milestone that matters most** — it is where "the levels parse"
-becomes "the levels are winnable", proven by replay rather than by hand.
+Verified. The replay tests cover all five levels in the gate. The keyboard path
+was driven through the real input layer — direction actions polled from
+`Input`, undo pushed as an event into the viewport — confirming that one
+keypress makes exactly one push, that a cleared board ignores further movement,
+that undo restores the start exactly, and that holding a direction steps once
+immediately and then repeats.
+
+**This was the milestone that mattered most** — it is where "the levels parse"
+became "the levels are winnable", proven by replay rather than by hand.
 
 ---
 

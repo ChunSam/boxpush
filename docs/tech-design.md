@@ -76,9 +76,13 @@ boxpush/
 │  └─ roadmap.md            Milestones and acceptance criteria
 ├─ levels/                  Level content as XSB text (*.xsb)
 ├─ scenes/
-│  └─ main.tscn             Boot scene (v0.1: pipeline report)
+│  └─ game/
+│     ├─ game_screen.tscn   Main scene: owns the state, input and HUD
+│     └─ board_view.tscn    The board, drawn from state
 ├─ scripts/
-│  ├─ main.gd               Boot scene script
+│  ├─ game/                 Scene scripts
+│  │  ├─ game_screen.gd     Input routing, key repeat, clear detection
+│  │  └─ board_view.gd      _draw() renderer, integer-scaled and centred
 │  ├─ core/                 Engine-independent logic — see the rule above
 │  │  ├─ level_data.gd      Parses and validates one XSB level
 │  │  ├─ level_index.gd     The ordered manifest of shipped levels
@@ -97,8 +101,7 @@ boxpush/
    └─ editor.ps1            Opens the editor
 ```
 
-Folders added later: `scenes/game/`, `scenes/ui/`, `assets/sprites/`,
-`assets/audio/`.
+Folders added later: `scenes/ui/`, `assets/sprites/`, `assets/audio/`.
 
 ---
 

@@ -50,12 +50,36 @@ func test_movement_uses_physical_keycodes() -> void:
 			assert_ne(key.physical_keycode, 0, "'%s' binds a physical key" % action)
 
 
+## Asserts the main scene can actually run, not merely that the file parses.
+##
+## [method load] is not enough on its own: a `.tscn` whose script fails to
+## compile still loads cleanly as a resource, so a broken main scene passed this
+## test while the engine logged a parse error beside it. Instantiating is what
+## separates the two — the script either attaches or comes back null.
+##
+## Safe headlessly because [method PackedScene.instantiate] does not run
+## [code]_ready[/code]; that waits for the node to enter a tree, so none of the
+## autoloads need to exist here.
 func test_main_scene_is_set_and_loadable() -> void:
 	var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
 
 	assert_ne(main_scene, "", "a main scene is configured")
-	assert_true(ResourceLoader.exists(main_scene), "main scene '%s' exists" % main_scene)
-	assert_ne(load(main_scene), null, "main scene '%s' loads" % main_scene)
+	if not ResourceLoader.exists(main_scene):
+		fail("main scene '%s' does not exist" % main_scene)
+		return
+
+	var packed := load(main_scene) as PackedScene
+	if packed == null:
+		fail("main scene '%s' is not a PackedScene" % main_scene)
+		return
+
+	var root := packed.instantiate()
+	if root == null:
+		fail("main scene '%s' does not instantiate" % main_scene)
+		return
+
+	assert_ne(root.get_script(), null, "main scene root '%s' kept its script" % root.name)
+	root.free()
 
 
 func test_autoloads_are_registered() -> void:

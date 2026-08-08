@@ -112,6 +112,10 @@ crashing. Implementing them is milestone v0.2.
   stored histories.
 - The save file is at `%APPDATA%\Godot\app_userdata\Boxpush\boxpush_save.cfg`.
   `SaveManager.reset_progress()` wipes it when a test needs a known-empty start.
+- A newly added `class_name` stays invisible until the engine rescans, and the
+  gate fails with `Could not find type "X" in the current scope` — which reads
+  like a typo, not a stale cache. Run `godot --headless --path . --import` once.
+  A fresh clone is unaffected; `Confirm-GodotImport` already does it.
 
 ## Language
 
