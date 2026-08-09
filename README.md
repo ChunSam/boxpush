@@ -3,9 +3,9 @@
 A small Sokoban puzzle game, built as a test project for the full Godot 4
 pipeline: data-driven content, headless tests, save/load, and export.
 
-Status: **v0.2 — playable**. The rules, the board and the keyboard are live, and
-every shipped level is proven winnable by a recorded solution replayed in the
-test suite. Menus and progression land in v0.3. See
+Status: **v0.3 — a game**. Menus, level select, progression and personal bests
+are in, on top of a rule set where every shipped level is proven winnable by a
+recorded solution the test suite replays. Art, motion and audio land in v0.4. See
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Requirements
@@ -22,6 +22,7 @@ then `PATH`, then the winget package folder. Nothing needs to be on `PATH`.
 .\tools\test.ps1      # run the test suite — the verification gate, exits 0 or 1
 .\tools\run.ps1       # launch the game
 .\tools\editor.ps1    # open the Godot editor
+.\tools\smoke.ps1     # drive the whole screen flow once, headlessly
 .\tools\solve.ps1     # regenerate the recorded level solutions
 ```
 
@@ -35,8 +36,9 @@ then `PATH`, then the winget package folder. Nothing needs to be on `PATH`.
 
 ## Controls
 
-`WASD` or the arrow keys move, `Z` undoes, `R` restarts. Undo is unlimited and
-never disabled — including after a clear, so you can undo back into play.
+`WASD` or the arrow keys move, `Z` undoes, `R` restarts, `Esc` goes back one
+screen. Undo is unlimited and never disabled — including after a clear, so you
+can undo back into play, and the clear overlay gets out of the way when you do.
 
 ## Adding a level
 

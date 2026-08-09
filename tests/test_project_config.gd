@@ -24,6 +24,15 @@ const REQUIRED_ACTIONS := [
 
 const REQUIRED_AUTOLOADS := ["LevelLibrary", "SaveManager"]
 
+## Every screen the router can raise. The router preloads all three, so a broken
+## one also takes the main scene down with it — but named here as well, so the
+## failure says which file rather than just "the game".
+const SCREEN_SCENES := [
+	"res://scenes/ui/main_menu.tscn",
+	"res://scenes/ui/level_select.tscn",
+	"res://scenes/game/game_screen.tscn",
+]
+
 
 func test_all_input_actions_exist() -> void:
 	for action: String in REQUIRED_ACTIONS:
@@ -50,35 +59,48 @@ func test_movement_uses_physical_keycodes() -> void:
 			assert_ne(key.physical_keycode, 0, "'%s' binds a physical key" % action)
 
 
-## Asserts the main scene can actually run, not merely that the file parses.
+func test_main_scene_is_set_and_loadable() -> void:
+	var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
+
+	assert_ne(main_scene, "", "a main scene is configured")
+	if main_scene.is_empty():
+		return
+
+	_assert_scene_instantiates(main_scene, "main scene")
+
+
+func test_every_screen_scene_instantiates() -> void:
+	for path: String in SCREEN_SCENES:
+		_assert_scene_instantiates(path, "screen")
+
+
+## Asserts a scene can actually run, not merely that the file parses.
 ##
 ## [method load] is not enough on its own: a `.tscn` whose script fails to
 ## compile still loads cleanly as a resource, so a broken main scene passed this
 ## test while the engine logged a parse error beside it. Instantiating is what
 ## separates the two — the script either attaches or comes back null.
 ##
-## Safe headlessly because [method PackedScene.instantiate] does not run
-## [code]_ready[/code]; that waits for the node to enter a tree, so none of the
-## autoloads need to exist here.
-func test_main_scene_is_set_and_loadable() -> void:
-	var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
-
-	assert_ne(main_scene, "", "a main scene is configured")
-	if not ResourceLoader.exists(main_scene):
-		fail("main scene '%s' does not exist" % main_scene)
+## This is the cheap half of what a hand-written `.tscn` gets wrong. It cannot
+## see a node *path* that no longer matches an [code]@onready[/code], because
+## those resolve in [code]_ready[/code] and [method PackedScene.instantiate] does
+## not run it. That half stays a hand-check — tech-design §11.
+func _assert_scene_instantiates(path: String, label: String) -> void:
+	if not ResourceLoader.exists(path):
+		fail("%s '%s' does not exist" % [label, path])
 		return
 
-	var packed := load(main_scene) as PackedScene
+	var packed := load(path) as PackedScene
 	if packed == null:
-		fail("main scene '%s' is not a PackedScene" % main_scene)
+		fail("%s '%s' is not a PackedScene" % [label, path])
 		return
 
 	var root := packed.instantiate()
 	if root == null:
-		fail("main scene '%s' does not instantiate" % main_scene)
+		fail("%s '%s' does not instantiate" % [label, path])
 		return
 
-	assert_ne(root.get_script(), null, "main scene root '%s' kept its script" % root.name)
+	assert_ne(root.get_script(), null, "%s '%s' kept its script" % [label, path])
 	root.free()
 
 

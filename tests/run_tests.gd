@@ -15,6 +15,7 @@ const SUITES := [
 	"res://tests/test_level_data.gd",
 	"res://tests/test_levels.gd",
 	"res://tests/test_project_config.gd",
+	"res://tests/test_save_manager.gd",
 	"res://tests/test_sokoban_state.gd",
 ]
 
@@ -42,6 +43,9 @@ func _initialize() -> void:
 			# into the next.
 			var suite: TestCase = script.new()
 			suite.call(method_name)
+			# Unconditional, so a failing test still releases its files and nodes
+			# and cannot take the rest of the run down with it.
+			suite.teardown()
 
 			if suite.failures.is_empty():
 				passed += 1

@@ -1,6 +1,6 @@
 # Boxpush — Technical Design
 
-Status: v0.2 (2026-08-09)
+Status: v0.3 (2026-08-09)
 Engine: Godot **4.7.1.stable.official** — `winget install GodotEngine.GodotEngine`
 Language: **GDScript**
 
@@ -76,10 +76,18 @@ boxpush/
 │  └─ roadmap.md            Milestones and acceptance criteria
 ├─ levels/                  Level content as XSB text (*.xsb)
 ├─ scenes/
+│  ├─ main.tscn             Main scene: holds one screen at a time — see §8
+│  ├─ ui/
+│  │  ├─ main_menu.tscn     Title, Play, Level select, Quit
+│  │  └─ level_select.tscn  One button per level, locked ones dimmed
 │  └─ game/
-│     ├─ game_screen.tscn   Main scene: owns the state, input and HUD
+│     ├─ game_screen.tscn   Owns the state, the input, the HUD and the overlay
 │     └─ board_view.tscn    The board, drawn from state
 ├─ scripts/
+│  ├─ ui/                   Menus and navigation
+│  │  ├─ screen_router.gd   Swaps screens; the only script that knows the flow
+│  │  ├─ main_menu.gd       ─┐ Report by signal, decide nothing
+│  │  └─ level_select.gd    ─┘
 │  ├─ game/                 Scene scripts
 │  │  ├─ game_screen.gd     Input routing, key repeat, clear detection
 │  │  └─ board_view.gd      _draw() renderer, integer-scaled and centred
@@ -100,10 +108,12 @@ boxpush/
    ├─ run.ps1               Launches the game
    ├─ editor.ps1            Opens the editor
    ├─ solve.ps1             Regenerates the recorded level solutions
-   └─ solve_levels.gd       The search behind it (headless, BFS)
+   ├─ solve_levels.gd       The search behind it (headless, BFS)
+   ├─ smoke.ps1             Drives the whole screen flow once — see §11
+   └─ smoke_flow.gd         The run behind it (headless, but with a live tree)
 ```
 
-Folders added later: `scenes/ui/`, `assets/sprites/`, `assets/audio/`.
+Folders added later: `assets/sprites/`, `assets/audio/`.
 
 ---
 
@@ -241,7 +251,68 @@ board is never in a state the player did not ask for. 90 ms linear per step.
 
 ---
 
-## 8. Save data
+## 8. Screen flow (v0.3 →)
+
+GDD §8 owns the flow itself — which screens exist and what the player can reach
+from where. This section is only how it is assembled.
+
+**One root scene owns exactly one screen at a time.** From v0.3, `scenes/main.tscn`
+is the main scene. Its script instantiates the next screen, sets whatever that
+screen needs, adds it, and frees the outgoing one.
+
+```
+main.tscn  (Control, screen_router.gd)
+└─ one of:  main_menu.tscn  │  level_select.tscn  │  game_screen.tscn
+```
+
+`get_tree().change_scene_to_file()` was the obvious alternative and is worse
+here: it replaces the whole tree, so the only way left to tell the incoming
+screen *which level* to open is a global, and the autoloads are services, not a
+message bus. Instantiating explicitly means the level index is an ordinary
+argument set before `add_child` — which is the shape `game_screen.gd` was
+already written for, its `@export var level_index` being exported for exactly
+this.
+
+**Screens report; the router decides.** A screen emits a past-tense signal and
+does nothing else about navigation, so no screen has to know what any other
+screen is called.
+
+| Screen | Emits |
+| --- | --- |
+| `MainMenu` | `play_pressed`, `level_select_pressed`, `quit_pressed` |
+| `LevelSelect` | `level_chosen(index)`, `back_pressed` |
+| `GameScreen` | `next_level_requested`, `level_list_requested` |
+
+So the game screen never learns whether a next level exists: the router asks
+`LevelLibrary.next_index()` and falls back to the level list at the end of the
+set. Retry and restart never leave the screen, so neither is a signal.
+
+**`Esc` (the `back` action) means one step outward, and never quits:**
+
+| From | Goes to |
+| --- | --- |
+| Main menu | nowhere — deliberately inert |
+| Level select | main menu |
+| Game, and the clear overlay | level list |
+
+Quitting is the explicit button on the main menu. A `back` key that exits the
+game from the root is a key that loses a session to a mis-hit.
+
+**The clear overlay belongs to the game screen, not to the router.** It is drawn
+over the frozen board when `is_solved()` first goes true and hidden again the
+moment the player undoes back into play. GDD §4 makes undo unconditional —
+including out of a solved board — so the overlay must not consume `Z`: its
+buttons are focusable, and undo, restart and movement keep reaching the state
+underneath it.
+
+**A clear is recorded once per entry into the solved state**, at the same latch
+v0.2 used to print the clear line. Undoing out and re-solving records again, and
+that is correct rather than an exploit: undo restores both counters, so the
+second clear's numbers were genuinely paid for.
+
+---
+
+## 9. Save data
 
 `user://boxpush_save.cfg` — on Windows,
 `%APPDATA%\Godot\app_userdata\Boxpush\boxpush_save.cfg`.
@@ -268,9 +339,26 @@ A save whose `format_version` does not match is **discarded, not migrated**. Tha
 is the right trade for a test project and the one decision here a shipping game
 would revisit.
 
+### The path is a `var`, not a `const`
+
+`save_manager.gd` holds `save_path`, defaulted to `SAVE_PATH`. Nothing in the
+game ever assigns it; the test suite does, and that is the whole reason it is
+not a constant.
+
+The seam is not optional. Autoloads **do** exist in a headless `--script` run —
+`SaveManager` and `LevelLibrary` are both children of the root while the suite
+executes, and `_ready()` has already read the real save. A test that called
+`SaveManager.record_clear()` would therefore overwrite the developer's own
+progress and, worse, would pass. Tests instantiate the script themselves and
+point it at a scratch file beside the real one.
+
+Redirecting the whole directory was tried first and does not work: `--userdir`
+leaves `OS.get_user_data_dir()` at `…/app_userdata/Boxpush` for this project, so
+the suite would still have been writing to the live folder.
+
 ---
 
-## 9. Input
+## 10. Input
 
 Actions are defined in `project.godot` and asserted by `test_project_config.gd`,
 because a broken input map produces a game that runs perfectly and ignores the
@@ -295,7 +383,7 @@ adding swipe or an on-screen D-pad later touches one file and no game logic.
 
 ---
 
-## 10. Testing
+## 11. Testing
 
 ```powershell
 .\tools\test.ps1        # exits 0 on success, 1 on any failure
@@ -313,11 +401,23 @@ scene, no frame loop. Suites are listed explicitly in `run_tests.SUITES`; each
 and assertions record failures rather than aborting, so one method reports every
 problem it found instead of only the first.
 
+There is a `teardown()` hook and no `setup()` hook, which is not an oversight: a
+fresh instance per test means a member initialiser already *is* setup, while
+releasing a `Node` or deleting a scratch file has no such equivalent. It runs
+whether the test passed or failed — and the non-aborting assertions are what
+make that reliable, since a failed expectation cannot skip the cleanup below it.
+
+**The gate also fails a green run that leaked.** Godot reports leaked objects at
+exit, long after the runner has printed `0 failed` and decided the run passed, so
+`test.ps1` re-reads stderr and turns a leak into a non-zero exit. Watched to
+fail: deleting the runner's `teardown()` call leaks 24 instances, and before this
+check existed that run still reported 64 passed and exited 0.
+
 **No test addon.** GUT and friends are good, but the entire harness here is two
 small files, has no version to keep in step with the engine, and runs anywhere
 Godot runs. If the suite outgrows it, swapping in GUT is a contained change.
 
-Covered as of v0.2 (47 tests):
+Covered as of v0.3 (65 tests):
 
 - **`test_level_data.gd`** — parsing, every glyph, ASCII round-trip, and each
   validation rule, asserted through its rejection message.
@@ -327,26 +427,45 @@ Covered as of v0.2 (47 tests):
 - **`test_levels.gd`** — every shipped level parses, is structurally sane, and
   **is cleared by replaying its recorded solution**. That last one is what turns
   "the levels parse" into "the levels are winnable".
+- **`test_save_manager.gd`** — the records, the unlock chain, `resume_index`, and
+  every way a save file can go wrong: missing, unparseable, unstamped, or written
+  by another format version. The on-disk keys are asserted against the file
+  itself, because "keyed by level id, never by index" is a promise about the file
+  rather than about the API.
 - **`test_project_config.gd`** — the input map, the autoloads, the `SUITES`
-  manifest, and that the main scene instantiates with its script attached.
+  manifest, and that the main scene and every screen instantiate with their
+  scripts attached.
 
 Solutions are recorded rather than searched at test time: `tools\solve.ps1`
 finds them by breadth-first search driven through the real `try_move`, and the
 suite only replays. Searching in the gate would be slow, and would also pass a
 level that had silently become a different — but still solvable — level.
 
-Not covered yet:
+### The smoke run, and what is still hand-checked
 
-1. **`SaveManager`** — implemented since v0.1 and entirely untested, which makes
-   it the least-trustworthy code in the project. Needs `user://` redirected to a
-   temp dir to stay hermetic; use `--userdir` or inject the path. v0.3.
-2. **Scene behaviour** — input routing, key repeat and clear detection are
-   verified by hand rather than in the gate, because `scripts/core/` is the part
-   deliberately kept testable without an engine.
+`tools\smoke.ps1` drives the real scene tree once — menu, level select, all five
+levels cleared in sequence, the clear overlay, undo back out of a clear, and a
+relaunch with the progress intact. That is the v0.3 acceptance path, made
+re-runnable.
+
+It is **not** part of the gate, and that separation is the point. The gate runs
+as a `SceneTree` that never builds a tree, which is what keeps it under a second
+and lets it run on every save; the smoke run needs a live tree, a `Window`
+actually inside it, and a real frame. Folding one into the other would turn the
+fast check into the slow one. Run the smoke after touching a screen, a signal
+between screens, or the save.
+
+What neither can see, and what therefore still needs eyes:
+
+- **How it looks.** Board placement and scaling, whether the overlay sits over
+  the board legibly, whether crate-on-goal reads at a glance, font sizes.
+- **How it feels.** The key-repeat rate in the hand. The smoke run replays moves
+  straight into the state rather than through the repeat clock, precisely so that
+  it tests the flow and not the timing.
 
 ---
 
-## 11. Conventions
+## 12. Conventions
 
 Godot's official GDScript style guide, with these specifics:
 
@@ -363,7 +482,7 @@ Godot's official GDScript style guide, with these specifics:
 
 ---
 
-## 12. Open decisions
+## 13. Open decisions
 
 - **Level select for more than ~12 levels** — the current design is a flat grid
   of buttons. Chapters/pages are deferred until there is content to justify them.

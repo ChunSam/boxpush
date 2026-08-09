@@ -23,6 +23,15 @@ const NO_RECORD := -1
 
 signal progress_changed(level_id: String)
 
+## Where this instance reads and writes. A variable rather than a constant for
+## exactly one reason: the test suite points its own instances at a scratch file.
+##
+## Autoloads are alive during a headless [code]--script[/code] run, so a test
+## that used the [code]SaveManager[/code] singleton would overwrite the
+## developer's real progress — and pass while doing it. Nothing in the game
+## assigns this.
+var save_path := SAVE_PATH
+
 var _entries := {}
 
 
@@ -38,10 +47,10 @@ func load_progress() -> bool:
 	_entries.clear()
 
 	var config := ConfigFile.new()
-	var err := config.load(SAVE_PATH)
+	var err := config.load(save_path)
 	if err != OK:
 		if err != ERR_FILE_NOT_FOUND:
-			push_warning("Could not read %s (error %d); starting fresh." % [SAVE_PATH, err])
+			push_warning("Could not read %s (error %d); starting fresh." % [save_path, err])
 		return false
 
 	var version: int = config.get_value(SECTION_META, "format_version", 0)
@@ -50,6 +59,12 @@ func load_progress() -> bool:
 			"Save format %d is not %d; discarding progress." % [version, SAVE_FORMAT_VERSION]
 		)
 		return false
+
+	# Guarded rather than assumed: a save written by reset_progress() has a [meta]
+	# section and no [progress] one, and asking ConfigFile for the keys of a
+	# section it does not have is an engine error, not an empty list.
+	if not config.has_section(SECTION_PROGRESS):
+		return true
 
 	for level_id in config.get_section_keys(SECTION_PROGRESS):
 		var entry: Dictionary = config.get_value(SECTION_PROGRESS, level_id, {})
@@ -68,9 +83,9 @@ func save_progress() -> bool:
 	for level_id: String in _entries:
 		config.set_value(SECTION_PROGRESS, level_id, _entries[level_id])
 
-	var err := config.save(SAVE_PATH)
+	var err := config.save(save_path)
 	if err != OK:
-		push_error("Could not write %s (error %d)." % [SAVE_PATH, err])
+		push_error("Could not write %s (error %d)." % [save_path, err])
 		return false
 	return true
 
@@ -129,11 +144,16 @@ func record_clear(level_id: String, moves: int, pushes: int) -> Dictionary:
 ## Levels unlock in order: level 0 is always open, and level n opens once n-1 is
 ## cleared. Any level already cleared stays open even if the chain ahead of it
 ## is not.
+##
+## An index outside the set is locked, negatives included. That is not defensive
+## padding: [method LevelLibrary.next_index] returns -1 past the end of the set,
+## so "is the next level unlocked?" hands this a negative index as a matter of
+## course, and answering yes would send the router at a level that is not there.
 func is_unlocked(index: int) -> bool:
-	if index <= 0:
-		return true
-	if index >= LevelIndex.count():
+	if index < 0 or index >= LevelIndex.count():
 		return false
+	if index == 0:
+		return true
 	var previous_id := LevelIndex.id_for_path(LevelIndex.path_at(index - 1))
 	return is_cleared(previous_id) or is_cleared(LevelIndex.id_for_path(LevelIndex.path_at(index)))
 
@@ -151,7 +171,7 @@ func resume_index() -> int:
 ## tests that need a known-empty starting state.
 func reset_progress() -> void:
 	_entries.clear()
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 	save_progress()
 	progress_changed.emit("")

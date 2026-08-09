@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/level_select.gd" id="1_select"]
+
+[node name="LevelSelect" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_select")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.101961, 0.117647, 0.141176, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 120.0
+offset_top = 56.0
+offset_right = -120.0
+offset_bottom = -56.0
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Layout"]
+theme_override_colors/font_color = Color(0.898039, 0.913725, 0.941176, 1)
+theme_override_font_sizes/font_size = 34
+text = "Select a level"
+
+[node name="List" type="VBoxContainer" parent="Layout"]
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Hint" type="Label" parent="Layout"]
+theme_override_colors/font_color = Color(0.607843, 0.647059, 0.709804, 1)
+theme_override_font_sizes/font_size = 16
+text = "[Up]/[Down] choose    [Enter] play    [Esc] back"

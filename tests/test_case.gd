@@ -14,6 +14,18 @@ extends RefCounted
 var failures := PackedStringArray()
 
 
+## Called by the runner after every [code]test_*[/code] method, pass or fail.
+##
+## There is no matching setup hook and there does not need to be: the runner
+## builds a fresh suite instance per test, so a member initialiser already is
+## setup. Teardown has no such equivalent, and a suite that opens files or builds
+## [Node]s has to undo both — a leaked node is reported at exit as an ObjectDB
+## leak with no hint of which test dropped it, and a leftover file silently
+## changes what the next test sees.
+func teardown() -> void:
+	pass
+
+
 func assert_true(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)

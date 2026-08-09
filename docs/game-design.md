@@ -243,14 +243,42 @@ resolves in full.
               └──────────► Game (n+1)
 ```
 
-- **Main menu** — title, Play (resumes at the furthest unlocked level), Level
-  select, Quit.
-- **Level select** — a grid of five buttons. Locked levels are dimmed; a cleared
-  level shows its best move/push counts.
-- **Game HUD** — level name, move count, push count, and a hint line for the
-  undo/restart keys. Deliberately a single unobtrusive top bar.
+- **Main menu** — title, Play, Level select, Quit. Play opens the first level not
+  yet cleared, or the last level once every one of them is.
+- **Level select** — a column of five buttons. A locked level shows its number and
+  nothing else and cannot be chosen; a cleared level shows its title and its best
+  move and push counts.
+- **Game HUD** — level name, move count, push count, crates home, and a hint line
+  for the movement, undo, restart and back keys. Deliberately a single
+  unobtrusive top bar.
 - **Clear overlay** — semi-transparent panel over the frozen board showing final
-  counts, whether a personal best was beaten, and Next / Retry / Level list.
+  counts, whether this was a first clear or beat a personal best, and
+  Next / Retry / Level list. On the last level, Next is absent rather than
+  disabled.
+
+### Unlocking
+
+Level 1 is always open. Level *n* opens when level *n−1* is cleared, and a level
+once cleared stays open regardless of what happens around it. That last clause
+is what makes the rule safe to change later: a player who has finished the set
+cannot be locked out of anything by a reordering or by a new level appearing in
+the middle.
+
+### Keyboard, everywhere
+
+Every screen is fully operable without a mouse, not only the board. On entry
+each screen puts focus somewhere useful — Play on the main menu, the level the
+player would resume in the level list, Next on the clear overlay — so a player
+can go from launch to cleared level five without touching the pointer. This is
+an accessibility requirement (§9), not a convenience.
+
+`Esc` means *one step outward*: level select → main menu, game → level select.
+It does nothing on the main menu. Quitting is the explicit button, because a
+back key that exits the game is a key that ends a session by mis-hit.
+
+The clear overlay does not capture `Esc`, and it does not capture undo either.
+Undo out of a solved board is guaranteed by §4, so undoing dismisses the overlay
+and returns the player to the level exactly where they left it.
 
 ---
 

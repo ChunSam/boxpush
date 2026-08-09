@@ -25,8 +25,13 @@ guards, confirm it goes red with a message you could act on, then restore. Every
 guard in this repo was added because a green suite turned out to be hiding
 something, so a guard that has only ever been green proves nothing.
 
+`.\tools\smoke.ps1` is the other check: it drives the whole screen flow through a
+live scene tree — menu, every level cleared, the overlay, a relaunch. It is
+deliberately *not* in the gate (tech-design §11), so run it yourself after
+touching a screen, a signal between screens, or the save.
+
 The other entry points are `.\tools\run.ps1` (launch the game) and
-`.\tools\editor.ps1` (open the editor). All three resolve the engine through
+`.\tools\editor.ps1` (open the editor). All of them resolve the engine through
 `tools/find-godot.ps1`, which checks `$env:GODOT_BIN`, then `PATH`, then the
 winget package folder. On a fresh clone the first run also does a one-time
 `--import`: without the `.godot` cache no `class_name` resolves and every script
@@ -93,12 +98,13 @@ movement test fails.
 
 ## Current state of the code
 
-v0.2 is complete. The rules, the board and the keyboard all work, and every
-shipped level is proven winnable by a solution the gate replays.
+v0.3 is built and both checks are green. Menus, level select, progression and
+personal bests are in; `SaveManager`, untested since v0.1, is now the most
+thoroughly covered file here.
 
-`SaveManager` is the exception: implemented since v0.1 and **not covered by a
-single test**. It is the one part of the project where "it looks right" is the
-whole of the evidence. v0.3 is where that gets fixed.
+Outstanding: the key-repeat feel on v0.3's screens. Every screen has been
+rendered and looked at, but the smoke run replays moves into the state rather
+than through the repeat clock, so 250 ms / 90 ms is unconfirmed. See the roadmap.
 
 ## Conventions
 
@@ -117,6 +123,10 @@ whole of the evidence. v0.3 is where that gets fixed.
 - `SokobanState.DIRECTIONS` order is the undo history's encoding — entries pack
   as `direction_index | (was_a_push << 2)`. Reordering it silently invalidates
   stored histories.
+- Autoloads are **live during the headless gate** — `SaveManager` is on the root
+  and has already read your real save. A test that calls the singleton overwrites
+  your own progress and passes while doing it. Build the script yourself and set
+  `save_path`; `tests/test_save_manager.gd` shows the shape.
 - The save file is at `%APPDATA%\Godot\app_userdata\Boxpush\boxpush_save.cfg`.
   `SaveManager.reset_progress()` wipes it when a test needs a known-empty start.
 - A newly added `class_name` stays invisible until the engine rescans, and the

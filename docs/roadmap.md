@@ -61,22 +61,45 @@ became "the levels are winnable", proven by replay rather than by hand.
 
 ---
 
-## v0.3 — Game
+## v0.3 — Game — verified; one hands-on check left
 
 Everything around the board.
 
-- [ ] `scenes/ui/main_menu.tscn` — Play / Level select / Quit
-- [ ] `scenes/ui/level_select.tscn` — five buttons, locked ones dimmed, bests shown
-- [ ] Progression: `SaveManager.is_unlocked()` gates level select; `resume_index()`
+- [x] `scenes/main.tscn` — the screen router; one screen alive at a time
+- [x] `scenes/ui/main_menu.tscn` — Play / Level select / Quit
+- [x] `scenes/ui/level_select.tscn` — five buttons, locked ones dimmed, bests shown
+- [x] Progression: `SaveManager.is_unlocked()` gates level select; `resume_index()`
       drives Play
-- [ ] HUD: level name, moves, pushes, crates-home, key hints
-- [ ] Clear overlay: final counts, records beaten, Next / Retry / Level list
-- [ ] `Esc` navigation between all screens
-- [ ] Tests: `SaveManager` against a redirected `user://`; unlock-chain logic
+- [x] HUD: level name, moves, pushes, crates-home, key hints
+- [x] Clear overlay: final counts, records beaten, Next / Retry / Level list
+- [x] `Esc` navigation between all screens
+- [x] Tests: `SaveManager` against a redirected save path; unlock-chain logic
 
 **Acceptance:** launch from a wiped save, clear all five levels in sequence
 without touching the console, restart the game, and find progress and personal
 bests intact.
+
+`tools\smoke.ps1` performs exactly that, headlessly, in 81 checks — including the
+relaunch. `tools\test.ps1` is green at 65 tests.
+
+Every screen was then rendered to a PNG and looked at, which caught two things no
+assertion would have: the clear overlay had no panel behind it and read as text
+floating over the board, and space-padding the level list into columns lined up
+three rows out of five, because the default font is proportional. The first is
+fixed; the second is reverted and left to v0.4, where the labels get nested
+properly alongside the art.
+
+**Left over: how the key repeat feels in the hand.** The smoke run replays moves
+straight into the state rather than through the repeat clock — deliberately, so
+that it measures the flow and not the timing — so 250 ms / 90 ms is still
+unconfirmed for v0.3's screens. That needs a human at `tools\run.ps1`.
+
+`SaveManager` is the whole reason this milestone exists — shipped and untested
+since v0.1, with every screen above built on top of it — so it was tested
+*before* anything was built on it rather than after. Writing those tests turned
+up two defects it had been carrying all along: `is_unlocked(-1)` answered *true*,
+which is exactly what `LevelLibrary.next_index()` hands it at the end of the set,
+and loading a save with no `[progress]` section raised an engine error.
 
 ---
 

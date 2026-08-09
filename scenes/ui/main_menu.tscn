@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.101961, 0.117647, 0.141176, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -170.0
+offset_right = 180.0
+offset_bottom = 170.0
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Layout"]
+theme_override_colors/font_color = Color(0.898039, 0.913725, 0.941176, 1)
+theme_override_font_sizes/font_size = 56
+text = "BOXPUSH"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Layout"]
+theme_override_colors/font_color = Color(0.607843, 0.647059, 0.709804, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Layout"]
+custom_minimum_size = Vector2(0, 24)
+
+[node name="PlayButton" type="Button" parent="Layout"]
+custom_minimum_size = Vector2(0, 48)
+theme_override_font_sizes/font_size = 22
+text = "Play"
+
+[node name="LevelSelectButton" type="Button" parent="Layout"]
+custom_minimum_size = Vector2(0, 48)
+theme_override_font_sizes/font_size = 22
+text = "Level select"
+
+[node name="QuitButton" type="Button" parent="Layout"]
+custom_minimum_size = Vector2(0, 48)
+theme_override_font_sizes/font_size = 22
+text = "Quit"
