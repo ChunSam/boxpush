@@ -134,16 +134,34 @@ feels in the hand.** No test and no screenshot has an opinion about 90 ms.
 
 ---
 
-## v0.5 — Shippable
+## v0.5 — Shippable — built; one play-through left
 
-- [ ] Windows export preset, **with `*.xsb` in the non-resource filter** — see
+- [x] Windows export preset, **with `*.xsb` in the non-resource filter** — see
       tech-design §5; this is the most likely way to ship a broken build
-- [ ] Export templates installed; exported build smoke-tested from a clean folder
-- [ ] README build instructions
+- [x] Export templates installed; exported build launched from a clean folder
+- [x] README build instructions
 - [ ] A cleared level in the exported build writes a save that survives a relaunch
 
 **Acceptance:** copy the exported folder to a path with no project checkout, run
 it, clear a level, relaunch, and see the progress.
+
+`tools\export.ps1` builds into `build/`. The preset is now committed rather than
+git-ignored, and `test_project_config.gd` asserts its filters — so the filter
+that decides whether a build has levels in it fails as a red test rather than
+being a paragraph someone had to have read. See tech-design §5 for why that
+reversal was worth making.
+
+Copied to a folder with no checkout, the build launches and runs clean: every
+level parses out of the pack, which `LevelLibrary` would have said otherwise at
+boot. **The first build made from this preset shipped the entire test harness and
+six screenshots**, because "all resources" means the suites and the review images
+are resources too; `exclude_filter` now drops them and the assertion holds it
+there. The pack went from 188 KB to 61 KB.
+
+**Left: actually playing it.** Clearing a level in the exported build and seeing
+the record survive a relaunch is a person's job — the exported pack deliberately
+contains no tooling to drive itself with, which is the point of the exclusion
+above.
 
 ---
 

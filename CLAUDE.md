@@ -32,9 +32,10 @@ touching a screen, a signal between screens, or the save.
 
 The other entry points are `.\tools\run.ps1` (launch the game),
 `.\tools\editor.ps1` (open the editor), `.\tools\shots.ps1` (render every screen
-to `shots/`, for the look) and `.\tools\make_assets.ps1` (regenerate the art and
-audio — the results are committed, so run it only after editing the palette or
-the cues). All of them resolve the engine through
+to `shots/`, for the look), `.\tools\export.ps1` (build a Windows release into
+`build/`) and `.\tools\make_assets.ps1` (regenerate the art and audio — the
+results are committed, so run it only after editing the palette or the cues).
+All of them resolve the engine through
 `tools/find-godot.ps1`, which checks `$env:GODOT_BIN`, then `PATH`, then the
 winget package folder. On a fresh clone the first run also does a one-time
 `--import`: without the `.godot` cache no `class_name` resolves and every script
@@ -101,12 +102,14 @@ movement test fails.
 
 ## Current state of the code
 
-v0.4 is complete and both checks are green (74 tests, 81 smoke checks). The board
-is tiles plus sprites, motion retargets rather than queues, and three audio cues
-and a mute toggle are in. Next is v0.5 — the Windows export.
+v0.5 is built and both checks are green (75 tests, 81 smoke checks). The whole
+scope ladder is done: rules, screens, progression, art, motion, audio, and a
+Windows build that runs from a folder with no checkout in it.
 
-Outstanding: the key-repeat feel in the hand. Neither check has an opinion about
-90 ms, and the smoke run bypasses the repeat clock on purpose. See the roadmap.
+Two things only a person can settle, both in the roadmap: how the key repeat
+feels in the hand, and clearing a level in the *exported* build to watch the
+record survive a relaunch. The exported pack deliberately carries no tooling to
+drive itself with.
 
 ## Conventions
 
@@ -119,9 +122,10 @@ Outstanding: the key-repeat feel in the hand. Neither check has an opinion about
 - `project.godot`'s `[input]` block is hand-written. `test_project_config.gd`
   guards it, because a broken input map yields a game that runs perfectly and
   ignores the keyboard.
-- The export preset needs `*.xsb` in "Filters to export non-resource files", or
-  the shipped build has no levels. `export_presets.cfg` is git-ignored, so this
-  must be re-entered on every machine.
+- `export_presets.cfg` is **committed**, against the usual advice, because its
+  `*.xsb` non-resource filter is the difference between a build with levels and
+  one without. `test_project_config.gd` asserts the filter. Revisit if signing
+  credentials ever have to live there.
 - `SokobanState.DIRECTIONS` order is the undo history's encoding — entries pack
   as `direction_index | (was_a_push << 2)`. Reordering it silently invalidates
   stored histories.

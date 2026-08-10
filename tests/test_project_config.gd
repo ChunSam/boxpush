@@ -11,6 +11,7 @@ extends TestCase
 
 const RUNNER_PATH := "res://tests/run_tests.gd"
 const TESTS_DIR := "res://tests"
+const EXPORT_PRESETS := "res://export_presets.cfg"
 
 const REQUIRED_ACTIONS := [
 	"move_up",
@@ -118,6 +119,53 @@ func test_project_identity() -> void:
 		"Boxpush",
 		"project name",
 	)
+
+
+## The single most likely way to ship a broken build, turned into a failing test.
+##
+## `.xsb` files are not imported resources — they are copied verbatim, and only
+## if the export preset's non-resource filter names them. A preset without
+## `*.xsb` produces a build that launches, renders and responds perfectly, and
+## has no levels in it.
+##
+## Until v0.5 this requirement lived in a document and `export_presets.cfg` was
+## git-ignored, so every machine had to re-enter it from memory. A document
+## cannot fail; this can.
+func test_the_export_preset_ships_the_levels() -> void:
+	var config := ConfigFile.new()
+	if config.load(EXPORT_PRESETS) != OK:
+		fail("no %s — the project cannot be exported without one" % EXPORT_PRESETS)
+		return
+
+	var presets := 0
+	for section: String in config.get_sections():
+		# "preset.0" is the preset; "preset.0.options" is its platform settings.
+		if not section.begins_with("preset.") or section.contains(".options"):
+			continue
+
+		presets += 1
+		var name: String = config.get_value(section, "name", section)
+		assert_contains(
+			str(config.get_value(section, "include_filter", "")),
+			"*.xsb",
+			"preset '%s' includes the levels in the build" % name,
+		)
+		assert_ne(
+			str(config.get_value(section, "export_path", "")),
+			"",
+			"preset '%s' says where the build goes" % name,
+		)
+
+		# The default filter is "all resources", which means the test harness and
+		# the developer tools are resources too. The first build made from this
+		# preset shipped every suite in tests/ and every screenshot in shots/.
+		var excluded := str(config.get_value(section, "exclude_filter", ""))
+		for unwanted: String in ["tests/*", "tools/*", "shots/*"]:
+			assert_contains(
+				excluded, unwanted, "preset '%s' keeps %s out of the build" % [name, unwanted]
+			)
+
+	assert_true(presets > 0, "%s defines at least one preset" % EXPORT_PRESETS)
 
 
 ## Every test suite on disk must be listed in run_tests.gd's SUITES manifest.

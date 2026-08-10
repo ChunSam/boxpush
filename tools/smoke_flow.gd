@@ -29,9 +29,16 @@ var _checks := 0
 var _main: Control
 var _started := false
 
-## Frames to idle after the run, for the deletion queue.
-const SETTLE_FRAMES := 5
-var _settling := 0
+## Seconds to idle after the run before quitting.
+##
+## Two things need the time, and only one of them is measured in frames. The
+## deletion queue drains on the next frame, so a handful would do for that. The
+## audio thread is the reason this is a duration: clearing a level fires the
+## clear cue, the run finishes long before a 0.33 s cue does, and quitting while
+## a playback is still live leaks it — intermittently, which is worse than
+## always. Headless frames are uncapped, so this is real time, not 36 frames.
+const SETTLE_SECONDS := 0.75
+var _settled := 0.0
 
 # Fetched by node path rather than named directly: a script started with
 # `--script` is compiled before the autoload names become global identifiers.
@@ -43,19 +50,19 @@ var _library: Node
 ## initialize time the root [Window] is not yet inside the tree, so [method
 ## Node._ready] never fires on anything added and [method Viewport.push_input]
 ## refuses outright — which reads as "the menu did not open".
-func _process(_delta: float) -> bool:
+func _process(delta: float) -> bool:
 	if not _started:
 		_started = true
 		_run()
 		_report()
 		return false
 
-	# Idle frames before quitting, so the deletion queue drains. The run walks
-	# through six screens and every one of them is removed and queue_free()d;
-	# quitting in the same frame reports all of their nodes as leaked, which is
-	# an artefact of the harness rather than anything the game does.
-	_settling += 1
-	if _settling < SETTLE_FRAMES:
+	# Idle before quitting — see SETTLE_SECONDS. Everything the run built is
+	# already released by the game's own code; this is only about giving that
+	# release somewhere to happen, since a run that ends in the frame it started
+	# reports every screen it walked through as leaked.
+	_settled += delta
+	if _settled < SETTLE_SECONDS:
 		return false
 
 	quit(0 if _problems.is_empty() else 1)

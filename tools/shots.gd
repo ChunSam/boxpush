@@ -69,6 +69,7 @@ func _start() -> void:
 	if _dir.is_empty():
 		_dir = ProjectSettings.globalize_path(DEFAULT_DIR)
 	DirAccess.make_dir_recursive_absolute(_dir)
+	_mark_ignored(_dir)
 
 	_save = root.get_node("SaveManager")
 	_library = root.get_node("LevelLibrary")
@@ -123,6 +124,21 @@ func _clear_the_rest() -> void:
 			return
 		_press_node(next)
 		_solve_current()
+
+
+## Drops a `.gdignore` beside the shots, so the engine never imports them.
+##
+## Without it the screenshots become imported resources and get packed into the
+## exported build — which is how a review aid ends up shipping to players. The
+## export preset excludes `shots/*` as well; this stops them existing as
+## resources in the first place.
+func _mark_ignored(dir: String) -> void:
+	var marker := "%s/.gdignore" % dir
+	if FileAccess.file_exists(marker):
+		return
+	var file := FileAccess.open(marker, FileAccess.WRITE)
+	if file != null:
+		file.close()
 
 
 func _shot(name: String) -> void:

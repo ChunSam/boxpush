@@ -5,10 +5,15 @@
 # Godot 3 leftovers (kept so a stray import dir never lands in a commit)
 .import/
 
-# Export artifacts. export_presets.cfg is ignored because it embeds absolute
-# local paths and, for some platforms, signing credentials.
+# Export artifacts.
+#
+# export_presets.cfg is deliberately NOT ignored. It was, on the general
+# principle that presets embed absolute paths and signing credentials — but this
+# one embeds neither, and ignoring it meant the `*.xsb` non-resource filter had
+# to be re-entered by hand on every machine. That filter is the difference
+# between a build with levels and a build without, so it travels with the repo
+# and is asserted by test_project_config.gd. Revisit if signing is ever added.
 export.cfg
-export_presets.cfg
 /build/
 /export/
 
