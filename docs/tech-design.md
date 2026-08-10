@@ -1,6 +1,6 @@
 # Boxpush — Technical Design
 
-Status: v0.4 (2026-08-10)
+Status: v0.5 (2026-08-10)
 Engine: Godot **4.7.1.stable.official** — `winget install GodotEngine.GodotEngine`
 Language: **GDScript**
 
@@ -193,11 +193,25 @@ dropping the file in `levels/` **and** appending its path to
 
 **2. The export preset must include `*.xsb`.**
 In *Project → Export → Resources*, "Filters to export non-resource files" must
-contain `*.xsb`, or the levels will not exist in the exported build. This is a
-v0.5 milestone item and the single most likely way to ship a broken build.
-`export_presets.cfg` is git-ignored because it embeds absolute local paths, so
-this setting is not carried by the repository and has to be re-entered on a new
-machine — hence writing it down here.
+contain `*.xsb`, or the levels will not exist in the exported build. It is the
+single most likely way to ship something that launches, runs, responds to the
+keyboard, and has no game in it.
+
+Through v0.4 this lived here as a note, because `export_presets.cfg` was
+git-ignored on the general principle that presets carry absolute paths and
+signing credentials. **v0.5 reversed that.** This preset carries neither, and
+ignoring it meant the one setting that decides whether a build has levels had to
+be re-entered from memory on every machine. The file is now committed, and
+`test_project_config.gd` asserts the filter — so the failure is a red test rather
+than a paragraph someone has to have read. Revisit if signing is ever added.
+
+**3. `export_filter="all_resources"` means the harness, too.**
+The first build made from this preset contained every test suite, every tool
+script and six review screenshots, because they are all resources under
+`res://`. `exclude_filter` now drops `tests/*`, `tools/*`, `docs/*` and
+`shots/*`, and the same test asserts it; the pack went from 188 KB to 61 KB.
+`tools/shots.ps1` additionally writes a `.gdignore` beside its output, so the
+screenshots are never imported as resources in the first place.
 
 ---
 
@@ -452,7 +466,18 @@ nothing inside the engine can notice. `Invoke-GodotScript` in `find-godot.ps1`
 re-reads stderr afterwards and turns a leak into a non-zero exit; both `test.ps1`
 and `smoke.ps1` go through it, so they hold the same line. Watched to fail twice:
 deleting the runner's `teardown()` call leaks 24 instances, and dropping the
-smoke run's settling frames leaks 11 — before the check existed, both exited 0.
+smoke run's settling period leaks 11 — before the check existed, both exited 0.
+
+**A leak check is only worth having if the runs are deterministic.** The first
+version of the smoke settle counted five frames, which fixed the obvious leak and
+left a subtler one that fired roughly one run in six. `--verbose` named it:
+`AudioStreamPlaybackWAV`, plus `clear.wav` still in use. Clearing a level fires a
+0.33 s cue, the run finishes in a fraction of that, and quitting mid-playback
+leaks it — a race with the audio thread, not with the deletion queue, and one the
+dummy audio driver does not avoid because the playback is created either way. The
+settle is therefore a *duration* rather than a frame count. A guard that cries
+wolf one run in six is worse than no guard, because the first thing anyone learns
+is to re-run it.
 
 **No test addon.** GUT and friends are good, but the entire harness here is two
 small files, has no version to keep in step with the engine, and runs anywhere

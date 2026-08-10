@@ -3,10 +3,11 @@
 A small Sokoban puzzle game, built as a test project for the full Godot 4
 pipeline: data-driven content, headless tests, save/load, and export.
 
-Status: **v0.4 — polished**. Menus, progression and personal bests sit on a rule
+Status: **v0.5 — shippable**. Menus, progression and personal bests sit on a rule
 set where every shipped level is proven winnable by a recorded solution the test
-suite replays, and the board is now tiles and sprites with 90 ms motion, a
-crate-lands-home pop and three audio cues. The Windows export lands in v0.5. See
+suite replays; the board is tiles and sprites with 90 ms motion, a
+crate-lands-home pop and three audio cues; and `tools\export.ps1` produces a
+Windows build that runs from a folder with no project checkout in it. See
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Requirements
@@ -27,7 +28,28 @@ then `PATH`, then the winget package folder. Nothing needs to be on `PATH`.
 .\tools\shots.ps1     # render every screen to shots/, for the parts you must see
 .\tools\solve.ps1     # regenerate the recorded level solutions
 .\tools\make_assets.ps1   # regenerate the placeholder art and audio cues
+.\tools\export.ps1    # build a Windows release into build/
 ```
+
+## Building a Windows release
+
+```powershell
+.\tools\export.ps1
+```
+
+The build lands in `build/`, which is git-ignored. Copy the **whole folder** to
+run it elsewhere — the `.exe` needs its `.pck` beside it.
+
+This needs the Godot **export templates** for 4.7.1, which are a separate
+download from the engine itself (~1 GB). Install them once from the editor —
+*Editor → Manage Export Templates → Download and Install* — or extract
+`Godot_v4.7.1-stable_export_templates.tpz` into
+`%APPDATA%\Godot\export_templates\4.7.1.stable\`.
+
+`export_presets.cfg` is committed rather than ignored, so its `*.xsb`
+non-resource filter travels with the repository, and `tools\test.ps1` asserts
+that the filter is there. Without it the build launches, runs, and contains no
+levels at all — see tech-design §5.
 
 ## Documentation
 
