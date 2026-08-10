@@ -12,6 +12,9 @@ export_presets.cfg
 /build/
 /export/
 
+# Screens rendered by tools/shots.ps1 — for looking at now, not for keeping.
+/shots/
+
 # Imported translations (generated from CSV)
 *.translation
 

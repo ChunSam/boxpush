@@ -20,6 +20,7 @@ const REQUIRED_ACTIONS := [
 	"undo_move",
 	"restart_level",
 	"back",
+	"toggle_mute",
 ]
 
 const REQUIRED_AUTOLOADS := ["LevelLibrary", "SaveManager"]

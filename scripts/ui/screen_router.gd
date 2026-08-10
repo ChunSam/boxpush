@@ -16,7 +16,26 @@ var _level_index := 0
 
 
 func _ready() -> void:
+	SaveManager.mute_changed.connect(_on_mute_changed)
+	_apply_mute()
 	show_main_menu()
+
+
+## Mute is global, so it is handled once here rather than in every screen. A
+## screen's [method Node._unhandled_input] runs before the router's, so a screen
+## that wanted the key could still claim it first.
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_mute"):
+		SaveManager.set_muted(not SaveManager.is_muted())
+		accept_event()
+
+
+func _on_mute_changed(_muted: bool) -> void:
+	_apply_mute()
+
+
+func _apply_mute() -> void:
+	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), SaveManager.is_muted())
 
 
 func show_main_menu() -> void:

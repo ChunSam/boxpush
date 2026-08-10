@@ -29,6 +29,10 @@ var _checks := 0
 var _main: Control
 var _started := false
 
+## Frames to idle after the run, for the deletion queue.
+const SETTLE_FRAMES := 5
+var _settling := 0
+
 # Fetched by node path rather than named directly: a script started with
 # `--script` is compiled before the autoload names become global identifiers.
 var _save: Node
@@ -40,12 +44,20 @@ var _library: Node
 ## Node._ready] never fires on anything added and [method Viewport.push_input]
 ## refuses outright — which reads as "the menu did not open".
 func _process(_delta: float) -> bool:
-	if _started:
+	if not _started:
+		_started = true
+		_run()
+		_report()
 		return false
-	_started = true
 
-	_run()
-	_report()
+	# Idle frames before quitting, so the deletion queue drains. The run walks
+	# through six screens and every one of them is removed and queue_free()d;
+	# quitting in the same frame reports all of their nodes as leaked, which is
+	# an artefact of the harness rather than anything the game does.
+	_settling += 1
+	if _settling < SETTLE_FRAMES:
+		return false
+
 	quit(0 if _problems.is_empty() else 1)
 	return false
 

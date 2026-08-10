@@ -38,6 +38,9 @@ const DIRECTION_ACTIONS := {
 @onready var _next_button: Button = $ClearOverlay/Panel/Margin/Layout/Buttons/NextButton
 @onready var _retry_button: Button = $ClearOverlay/Panel/Margin/Layout/Buttons/RetryButton
 @onready var _list_button: Button = $ClearOverlay/Panel/Margin/Layout/Buttons/ListButton
+@onready var _step_sound: AudioStreamPlayer = $Sounds/Step
+@onready var _push_sound: AudioStreamPlayer = $Sounds/Push
+@onready var _clear_sound: AudioStreamPlayer = $Sounds/Clear
 
 var _state: SokobanState
 var _held_action := ""
@@ -50,6 +53,8 @@ func _ready() -> void:
 	_next_button.pressed.connect(next_level_requested.emit)
 	_retry_button.pressed.connect(_on_retry_pressed)
 	_list_button.pressed.connect(level_list_requested.emit)
+	# The router owns the mute key; the HUD only has to notice it happened.
+	SaveManager.mute_changed.connect(func(_muted: bool) -> void: _refresh_hud())
 	_load_level(level_index)
 
 
@@ -138,8 +143,18 @@ func _step(dir: Vector2i) -> void:
 	# A cleared board freezes: only undo and restart still reach the state.
 	if _state.is_solved():
 		return
-	if _state.try_move(dir) == SokobanState.MoveResult.BLOCKED:
+
+	var result := _state.try_move(dir)
+	if result == SokobanState.MoveResult.BLOCKED:
 		return
+
+	# No cue for a blocked move. Walking into a wall should feel like nothing
+	# happened, because nothing did.
+	if result == SokobanState.MoveResult.PUSHED:
+		_push_sound.play()
+	else:
+		_step_sound.play()
+
 	_after_change()
 
 
@@ -167,6 +182,7 @@ func _report_clear() -> void:
 		return
 
 	_clear_reported = true
+	_clear_sound.play()
 	print(
 		"Cleared '%s' in %d moves, %d pushes."
 		% [_state.level.title, _state.move_count, _state.push_count]
@@ -217,7 +233,7 @@ func _refresh_hud() -> void:
 	var status := "  —  CLEARED" if _state.is_solved() else ""
 	_hud.text = (
 		"%d. %s%s\nmoves %d    pushes %d    crates home %d/%d"
-		+ "        [WASD] move   [Z] undo   [R] restart   [Esc] level list"
+		+ "     [WASD] move  [Z] undo  [R] restart  [M] sound %s  [Esc] level list"
 	) % [
 		level_index + 1,
 		_state.level.title,
@@ -226,6 +242,7 @@ func _refresh_hud() -> void:
 		_state.push_count,
 		_state.boxes_on_goal(),
 		_state.level.goal_count(),
+		"off" if SaveManager.is_muted() else "on",
 	]
 
 

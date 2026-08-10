@@ -21,7 +21,16 @@ const SAVE_FORMAT_VERSION := 1
 
 const NO_RECORD := -1
 
+## Audio setting, kept in [constant SECTION_META] beside the format stamp rather
+## than in [constant SECTION_PROGRESS]. It is not progress: wiping a save should
+## not turn the sound back on.
+const KEY_MUTED := "muted"
+
 signal progress_changed(level_id: String)
+
+## Not [signal progress_changed], because muting is not progress and the level
+## select has no reason to redraw for it.
+signal mute_changed(muted: bool)
 
 ## Where this instance reads and writes. A variable rather than a constant for
 ## exactly one reason: the test suite points its own instances at a scratch file.
@@ -33,6 +42,7 @@ signal progress_changed(level_id: String)
 var save_path := SAVE_PATH
 
 var _entries := {}
+var _muted := false
 
 
 func _ready() -> void:
@@ -60,6 +70,8 @@ func load_progress() -> bool:
 		)
 		return false
 
+	_muted = bool(config.get_value(SECTION_META, KEY_MUTED, false))
+
 	# Guarded rather than assumed: a save written by reset_progress() has a [meta]
 	# section and no [progress] one, and asking ConfigFile for the keys of a
 	# section it does not have is an engine error, not an empty list.
@@ -80,6 +92,7 @@ func load_progress() -> bool:
 func save_progress() -> bool:
 	var config := ConfigFile.new()
 	config.set_value(SECTION_META, "format_version", SAVE_FORMAT_VERSION)
+	config.set_value(SECTION_META, KEY_MUTED, _muted)
 	for level_id: String in _entries:
 		config.set_value(SECTION_PROGRESS, level_id, _entries[level_id])
 
@@ -167,8 +180,25 @@ func resume_index() -> int:
 	return maxi(0, LevelIndex.count() - 1)
 
 
+func is_muted() -> bool:
+	return _muted
+
+
+## Writes immediately, like a clear does. Muting is a decision the player made
+## once and should not have to make again next launch.
+func set_muted(value: bool) -> void:
+	if _muted == value:
+		return
+	_muted = value
+	save_progress()
+	mute_changed.emit(_muted)
+
+
 ## Wipes progress in memory and on disk. Exposed for the settings screen and for
 ## tests that need a known-empty starting state.
+##
+## Leaves [method is_muted] alone on purpose: someone clearing their progress is
+## starting the levels again, not asking for the sound back.
 func reset_progress() -> void:
 	_entries.clear()
 	if FileAccess.file_exists(save_path):
