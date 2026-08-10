@@ -129,6 +129,11 @@ of the roadmap is deliberate omissions, not a backlog.
 - `SokobanState.DIRECTIONS` order is the undo history's encoding — entries pack
   as `direction_index | (was_a_push << 2)`. Reordering it silently invalidates
   stored histories.
+- `LevelLibrary.levels` is **compacted** — a rejected level is skipped, not
+  held as a gap — while `SaveManager.is_unlocked()` indexes the full
+  `LEVEL_PATHS`. The two agree only because every shipped level parses. Known
+  and unfixed; see "Known, and left alone" in the roadmap before relying on an
+  index across both.
 - Autoloads are **live during the headless gate** — `SaveManager` is on the root
   and has already read your real save. A test that calls the singleton overwrites
   your own progress and passes while doing it. Build the script yourself and set
