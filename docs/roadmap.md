@@ -192,6 +192,29 @@ Everything below is what v1 deliberately does *not* contain.
 
 ---
 
+## Known, and left alone
+
+One defect is on the record and not fixed, because fixing it is new scope rather
+than unfinished scope.
+
+**`LevelLibrary`'s indices drift from `LevelIndex`'s when a level is rejected.**
+`LevelLibrary.levels` is compacted — `reload()` appends only the levels that
+parsed — while `SaveManager.is_unlocked()` indexes the full `LEVEL_PATHS`
+manifest. If an `.xsb` ever failed to parse, every index past it would name a
+different level to each of them: locks would land on the wrong rows in the level
+select, and a clear would be recorded against the wrong id.
+
+It is invisible today, because `test_levels.gd` proves every shipped level
+parses and the two lists are therefore always the same length. It is written down
+anyway, because `LevelLibrary` is *built* to carry on past a rejected level — it
+pushes an error and keeps going — which makes the tolerance half-implemented
+rather than absent, and half-implemented is the shape that bites later.
+
+Fixing it means picking one: keep `levels` index-aligned by storing nulls for the
+rejected, or make a rejected level fatal at boot and drop the tolerance.
+
+---
+
 ## Out of scope for v1
 
 Level editor · community `.xsb` import · move-replay export · deadlock hints ·
