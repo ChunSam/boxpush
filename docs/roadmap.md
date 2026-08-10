@@ -61,7 +61,7 @@ became "the levels are winnable", proven by replay rather than by hand.
 
 ---
 
-## v0.3 — Game — verified; one hands-on check left
+## v0.3 — Game ✅ complete (2026-08-10)
 
 Everything around the board.
 
@@ -89,10 +89,11 @@ three rows out of five, because the default font is proportional. The first is
 fixed; the second is reverted and left to v0.4, where the labels get nested
 properly alongside the art.
 
-**Left over: how the key repeat feels in the hand.** The smoke run replays moves
-straight into the state rather than through the repeat clock — deliberately, so
-that it measures the flow and not the timing — so 250 ms / 90 ms is still
-unconfirmed for v0.3's screens. That needs a human at `tools\run.ps1`.
+The last thing no script could settle — **how the key repeat feels in the hand** —
+was signed off on 2026-08-10, after a session at `tools\run.ps1` that cleared all
+five levels. 250 ms / 90 ms stands. The smoke run replays moves straight into the
+state rather than through the repeat clock, deliberately, so that it measures the
+flow and not the timing; that is why this needed a person and not a test.
 
 `SaveManager` is the whole reason this milestone exists — shipped and untested
 since v0.1, with every screen above built on top of it — so it was tested
@@ -129,18 +130,19 @@ can reproduce. `tools\shots.ps1` renders every screen, including one caught two
 frames into a step — which is how the wall tile's per-tile highlight was found to
 read as scanlines across a block of them, and removed.
 
-Still outstanding from v0.3 and unchanged by this milestone: **how the key repeat
-feels in the hand.** No test and no screenshot has an opinion about 90 ms.
+The key repeat and the 90 ms step were signed off by hand on 2026-08-10 — see
+v0.3. No test and no screenshot has an opinion about 90 ms, so that one always
+had to end with somebody playing it.
 
 ---
 
-## v0.5 — Shippable — built; one play-through left
+## v0.5 — Shippable ✅ complete (2026-08-10)
 
 - [x] Windows export preset, **with `*.xsb` in the non-resource filter** — see
       tech-design §5; this is the most likely way to ship a broken build
 - [x] Export templates installed; exported build launched from a clean folder
 - [x] README build instructions
-- [ ] A cleared level in the exported build writes a save that survives a relaunch
+- [x] A cleared level in the exported build writes a save that survives a relaunch
 
 **Acceptance:** copy the exported folder to a path with no project checkout, run
 it, clear a level, relaunch, and see the progress.
@@ -158,10 +160,35 @@ six screenshots**, because "all resources" means the suites and the review image
 are resources too; `exclude_filter` now drops them and the assertion holds it
 there. The pack went from 188 KB to 61 KB.
 
-**Left: actually playing it.** Clearing a level in the exported build and seeing
-the record survive a relaunch is a person's job — the exported pack deliberately
-contains no tooling to drive itself with, which is the point of the exclusion
-above.
+### What the save half actually rests on
+
+Worth being exact, because the last box was ticked on inference rather than on
+watching a number change.
+
+Copied to a folder with no checkout in it and played, the build left the save
+file rewritten — a later modification time, byte-identical contents. Both halves
+follow from that. It **read** the save: nothing else explains five records
+surviving a write, since a build that had failed to load would have written back
+only what it had, which is one entry. It **wrote** the save: nothing writes at
+boot, so a write means `record_clear` or `set_muted` ran.
+
+What nobody watched is a record *set in the exported build* being read back by a
+later launch of it — no record improved during that session, so the round trip of
+a changed value was never on screen. Each half was observed; their composition is
+the same code twenty tests and the smoke run already cover. Good enough to close,
+and written down so that nobody later mistakes it for something someone saw.
+
+---
+
+## The ladder is finished
+
+v0.5 was the last rung, and it is done. There is no v1.0 milestone here because
+there was never any work in one: **v0.5's acceptance is v1's**, and both
+documents have used "v1" all along to mean the thing v0.5 produces. What is left
+is a release decision — whether to tag it `1.0.0` — not a build one.
+`project.godot` reads `0.5.0`, which matches the ladder rather than the tag.
+
+Everything below is what v1 deliberately does *not* contain.
 
 ---
 

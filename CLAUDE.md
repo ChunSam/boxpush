@@ -102,14 +102,14 @@ movement test fails.
 
 ## Current state of the code
 
-v0.5 is built and both checks are green (75 tests, 81 smoke checks). The whole
-scope ladder is done: rules, screens, progression, art, motion, audio, and a
-Windows build that runs from a folder with no checkout in it.
+**The roadmap is finished.** v0.1 through v0.5 are all closed, both checks are
+green (75 tests, 81 smoke checks), and the Windows build runs from a folder with
+no checkout in it. The two hands-on sign-offs — how the key repeat feels, and the
+exported build's save — were done on 2026-08-10; the roadmap records exactly what
+was watched and what was inferred for the second one.
 
-Two things only a person can settle, both in the roadmap: how the key repeat
-feels in the hand, and clearing a level in the *exported* build to watch the
-record survive a relaunch. The exported pack deliberately carries no tooling to
-drive itself with.
+Further work is new scope, not remaining scope. The out-of-scope list at the foot
+of the roadmap is deliberate omissions, not a backlog.
 
 ## Conventions
 

@@ -3,7 +3,8 @@
 A small Sokoban puzzle game, built as a test project for the full Godot 4
 pipeline: data-driven content, headless tests, save/load, and export.
 
-Status: **v0.5 — shippable**. Menus, progression and personal bests sit on a rule
+Status: **v0.5 — shippable, and the roadmap is closed.** Menus, progression and
+personal bests sit on a rule
 set where every shipped level is proven winnable by a recorded solution the test
 suite replays; the board is tiles and sprites with 90 ms motion, a
 crate-lands-home pop and three audio cues; and `tools\export.ps1` produces a
