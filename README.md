@@ -3,9 +3,10 @@
 A small Sokoban puzzle game, built as a test project for the full Godot 4
 pipeline: data-driven content, headless tests, save/load, and export.
 
-Status: **v0.3 — a game**. Menus, level select, progression and personal bests
-are in, on top of a rule set where every shipped level is proven winnable by a
-recorded solution the test suite replays. Art, motion and audio land in v0.4. See
+Status: **v0.4 — polished**. Menus, progression and personal bests sit on a rule
+set where every shipped level is proven winnable by a recorded solution the test
+suite replays, and the board is now tiles and sprites with 90 ms motion, a
+crate-lands-home pop and three audio cues. The Windows export lands in v0.5. See
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Requirements
@@ -23,7 +24,9 @@ then `PATH`, then the winget package folder. Nothing needs to be on `PATH`.
 .\tools\run.ps1       # launch the game
 .\tools\editor.ps1    # open the Godot editor
 .\tools\smoke.ps1     # drive the whole screen flow once, headlessly
+.\tools\shots.ps1     # render every screen to shots/, for the parts you must see
 .\tools\solve.ps1     # regenerate the recorded level solutions
+.\tools\make_assets.ps1   # regenerate the placeholder art and audio cues
 ```
 
 ## Documentation

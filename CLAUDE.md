@@ -30,8 +30,11 @@ live scene tree — menu, every level cleared, the overlay, a relaunch. It is
 deliberately *not* in the gate (tech-design §11), so run it yourself after
 touching a screen, a signal between screens, or the save.
 
-The other entry points are `.\tools\run.ps1` (launch the game) and
-`.\tools\editor.ps1` (open the editor). All of them resolve the engine through
+The other entry points are `.\tools\run.ps1` (launch the game),
+`.\tools\editor.ps1` (open the editor), `.\tools\shots.ps1` (render every screen
+to `shots/`, for the look) and `.\tools\make_assets.ps1` (regenerate the art and
+audio — the results are committed, so run it only after editing the palette or
+the cues). All of them resolve the engine through
 `tools/find-godot.ps1`, which checks `$env:GODOT_BIN`, then `PATH`, then the
 winget package folder. On a fresh clone the first run also does a one-time
 `--import`: without the `.godot` cache no `class_name` resolves and every script
@@ -98,13 +101,12 @@ movement test fails.
 
 ## Current state of the code
 
-v0.3 is built and both checks are green. Menus, level select, progression and
-personal bests are in; `SaveManager`, untested since v0.1, is now the most
-thoroughly covered file here.
+v0.4 is complete and both checks are green (74 tests, 81 smoke checks). The board
+is tiles plus sprites, motion retargets rather than queues, and three audio cues
+and a mute toggle are in. Next is v0.5 — the Windows export.
 
-Outstanding: the key-repeat feel on v0.3's screens. Every screen has been
-rendered and looked at, but the smoke run replays moves into the state rather
-than through the repeat clock, so 250 ms / 90 ms is unconfirmed. See the roadmap.
+Outstanding: the key-repeat feel in the hand. Neither check has an opinion about
+90 ms, and the smoke run bypasses the repeat clock on purpose. See the roadmap.
 
 ## Conventions
 

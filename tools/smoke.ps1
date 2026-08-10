@@ -7,7 +7,8 @@
 # `tools\test.ps1` deliberately never builds a scene tree, and this needs a live
 # one — so run it after touching a screen, a signal between screens, or the save.
 #
-# It writes to a scratch save, never to the player's own.
+# It writes to a scratch save, never to the player's own, and it holds to the
+# same no-leak rule the gate does.
 #
 # Exits non-zero if any check fails.
 
@@ -21,5 +22,4 @@ Write-Host "Project: $root"
 
 Confirm-GodotImport -Godot $godot -ProjectRoot $root
 
-& $godot --headless --path $root --script res://tools/smoke_flow.gd
-exit $LASTEXITCODE
+exit (Invoke-GodotScript -Godot $godot -ProjectRoot $root -ScriptPath 'res://tools/smoke_flow.gd')

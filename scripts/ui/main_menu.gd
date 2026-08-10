@@ -12,6 +12,7 @@ signal quit_pressed
 @onready var _play_button: Button = $Layout/PlayButton
 @onready var _level_select_button: Button = $Layout/LevelSelectButton
 @onready var _quit_button: Button = $Layout/QuitButton
+@onready var _hint: Label = $Layout/Hint
 
 
 func _ready() -> void:
@@ -19,10 +20,18 @@ func _ready() -> void:
 	_level_select_button.pressed.connect(level_select_pressed.emit)
 	_quit_button.pressed.connect(quit_pressed.emit)
 
+	# The router owns the mute key. This screen only reports where it now stands,
+	# so that pressing M somewhere with no sound in it still shows an effect.
+	SaveManager.mute_changed.connect(func(_muted: bool) -> void: _refresh_hint())
+	_refresh_hint()
 	_refresh_subtitle()
 	# So the player can go from launch to cleared without reaching for a mouse —
 	# GDD §8 makes this a requirement of every screen, not a nicety.
 	_play_button.grab_focus()
+
+
+func _refresh_hint() -> void:
+	_hint.text = "[M] sound %s" % ["off" if SaveManager.is_muted() else "on"]
 
 
 ## Names the level Play will open, because "Play" alone gives a returning player

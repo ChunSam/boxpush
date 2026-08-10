@@ -197,6 +197,42 @@ func test_progress_changed_names_the_level_that_changed() -> void:
 	assert_eq(seen, [_id(0), ""], "a clear names its level; a reset names nothing in particular")
 
 
+func test_sound_starts_on_and_survives_a_relaunch() -> void:
+	var manager := _fresh_manager()
+	assert_false(manager.is_muted(), "the sound is on until someone turns it off")
+
+	manager.set_muted(true)
+
+	assert_true(manager.is_muted(), "muting takes effect")
+	assert_true(_open_manager().is_muted(), "and is still in force after a relaunch")
+
+
+## Wiping progress is someone restarting the levels, not asking for the sound
+## back, so the audio setting outlives the reset that clears everything else.
+func test_reset_keeps_the_sound_setting() -> void:
+	var manager := _fresh_manager()
+	manager.set_muted(true)
+	manager.record_clear(_id(0), 12, 3)
+
+	manager.reset_progress()
+
+	assert_false(manager.is_cleared(_id(0)), "reset still wipes progress")
+	assert_true(manager.is_muted(), "but leaves the sound where the player put it")
+	assert_true(_open_manager().is_muted(), "on disk as well as in memory")
+
+
+func test_mute_changed_reports_only_real_changes() -> void:
+	var manager := _fresh_manager()
+	var seen: Array[bool] = []
+	manager.mute_changed.connect(func(muted: bool) -> void: seen.append(muted))
+
+	manager.set_muted(true)
+	manager.set_muted(true)
+	manager.set_muted(false)
+
+	assert_eq(seen, [true, false], "setting the same value twice is not a change")
+
+
 func test_the_unlock_chain_opens_one_level_at_a_time() -> void:
 	var manager := _fresh_manager()
 

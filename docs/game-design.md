@@ -207,6 +207,7 @@ required to ship additional levels.
 | Undo | `Z` | `Backspace` |
 | Restart level | `R` | — |
 | Back / pause | `Esc` | — |
+| Mute / unmute | `M` | — |
 
 Bindings use *physical* key codes, so `WASD` stays in the same physical position
 on AZERTY and Dvorak layouts.
@@ -297,8 +298,11 @@ curve. Tweens are cosmetic only: the logical state updates instantly, and a new
 move retargets a running tween rather than waiting for it. A crate landing on a
 goal gets a one-shot 120 ms scale pop.
 
-**Audio.** Three cues in v1 — step, push, level clear. All are optional; the
-game is fully playable muted, and audio is a v0.4 milestone, not a v0.1 one.
+**Audio.** Three cues — step, push, level clear. Short, dry and deliberately
+plain: they mark an event rather than perform, because the step cue has to stay
+pleasant at the 90 ms repeat rate. A blocked move makes no sound at all; walking
+into a wall should feel like nothing happened, because nothing did. `M` mutes,
+and the setting outlives both the session and a progress reset.
 
 **Accessibility.** No colour-only information: crate-on-goal differs by outline
 as well as hue. No time pressure anywhere. No flashing. Full keyboard control
